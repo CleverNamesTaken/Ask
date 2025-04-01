@@ -11,8 +11,8 @@ This script will install a virtual environment to execute the script, and then p
 
 # Related
 
-[rtfm](https://github.com/leostat/rtfm)
-[tldr-red](https://github.com/Rvn0xsy/red-tldr)
+- [rtfm](https://github.com/leostat/rtfm)
+- [tldr-red](https://github.com/Rvn0xsy/red-tldr)
 
 # To do
 
