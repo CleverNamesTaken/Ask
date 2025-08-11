@@ -23,7 +23,6 @@
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
 [![project_license][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
 
 
 
@@ -100,11 +99,13 @@ Ask makes use of a TUI to help you write structured snippets that contain metada
 
 
 
+<!--
 ### Built With
 
 * [![Golang][go.dev]][https://go.dev]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+-->
 
 
 
