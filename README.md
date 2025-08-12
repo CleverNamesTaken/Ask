@@ -116,7 +116,7 @@ Download or compile the ask binary.
 
 ### Prerequisites
 
-None.  If you choose to serve your database of mysql, then you will need to write your configuration file with the IP, port, and credentials.
+None.  If you choose to serve your database with mysql, then you will need to write your configuration file with the IP, port, and credentials.
 
 `ask create conf`
 
