@@ -8,7 +8,7 @@ import (
 
 	"github.com/charmbracelet/huh"
 
-	"go-ask/ask_db"
+	"ask/ask_db"
 	"io/ioutil"
 
 	"github.com/spf13/cobra"
@@ -18,8 +18,8 @@ import (
 	//We might need this driver
 	_ "github.com/go-sql-driver/mysql"
 
-	"go-ask/internal/debug"
-	structs "go-ask/internal/model"
+	"ask/internal/debug"
+	structs "ask/internal/model"
 
 	"log"
 	"os"

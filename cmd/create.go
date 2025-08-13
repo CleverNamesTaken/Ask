@@ -7,16 +7,16 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"go-ask/config"
+	"ask/config"
 	"io"
 	"os"
 	"strconv"
 
 	//	"strings"
 	//	"database/sql"
-	"go-ask/ask_db"
-	"go-ask/internal/debug"
-	structs "go-ask/internal/model"
+	"ask/ask_db"
+	"ask/internal/debug"
+	structs "ask/internal/model"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -247,9 +247,13 @@ func createFullExample() (err error) {
 }
 func createTextExample() (err error) {
 	textFileName := "example.txt"
-	textFileContent := `This is an example snippet.  Variables are included in double brackets like this {{ VAR1 }}
+	textFileContent := `This is an example snippet.  Variables are indicated with the following rules: 
+	1. Use double curly braces and a space to surround the variable name.
+	2. Only letters and underscores are permitted in the variable name.
 
-Best practice is to use all capital letters and no special characters except for underscore in variable names.
+This is an example of a variable: {{ VAR1 }}
+
+Best practice is to use all capital letters to make it stand out, but you do you.
 
 It is also very helpful to provide lists of other snippets to do based on how this one worked
 	#next snippet
@@ -348,6 +352,7 @@ var (
 	databaseCmd = &cobra.Command{
 		Use:   "db_schema",
 		Short: "Create the ask database schema on the server.",
+		Aliases: []string{"db","schema"},
 		Long: `This command will create the schemas to support ask.  Under the hood, it creates three tables:
 
 - snippets ( id,name, description, variables, version, snippetText)

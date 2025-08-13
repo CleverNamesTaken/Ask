@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"go-ask/internal/debug"
-	structs "go-ask/internal/model"
+	"ask/internal/debug"
+	structs "ask/internal/model"
 
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
@@ -64,6 +64,28 @@ func configWizard() (v *viper.Viper, err error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return v, err
+	}
+
+	configPath := filepath.Join(homeDir, "/.config/ask/config.yaml")
+	_, err = os.Stat(configPath)
+	if err == nil {
+
+	prompt := ""
+promptLoop:
+	for {
+		fmt.Printf("[!] Found a configuration file at ~/.config/ask/config.yaml.  Do you want to overwrite it?\nY/N")
+		fmt.Scanln(&prompt)
+		switch prompt {
+		case "Y":
+			os.Remove(configPath)
+			break promptLoop
+		case "N":
+			os.Exit(1)
+		default:
+			fmt.Println("[!] Invalid option. Please try again.")
+		}
+	}
+
 	}
 
 	form := huh.NewForm(
@@ -134,7 +156,6 @@ func configWizard() (v *viper.Viper, err error) {
 			OutputDir: OutputDir,
 		}
 
-		configPath := filepath.Join(homeDir, "/.config/ask/config.yaml")
 
 		os.MkdirAll(homeDir+"/.config/ask", os.ModePerm)
 		yamlHandle, err := os.OpenFile(configPath, os.O_RDWR|os.O_CREATE, 0755)
@@ -206,6 +227,7 @@ var (
 	confCmd = &cobra.Command{
 		Use:   "conf",
 		Short: "Create config file",
+		Aliases: []string{"config"},
 		Long: `Generate an ask configuration file for connection to MySql database and where to save files to
 
 The configuration file will include information related to the database to store and query snippet information.

@@ -24,7 +24,7 @@
 package main
 
 import (
-	"go-ask/cmd"
+	"ask/cmd"
 )
 
 func main() {

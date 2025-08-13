@@ -11,7 +11,7 @@ import (
 	"database/sql"
 	"log"
 
-	"go-ask/internal/debug"
+	"ask/internal/debug"
 
 	"github.com/charmbracelet/huh"
 	//"github.com/charmbracelet/huh/spinner"

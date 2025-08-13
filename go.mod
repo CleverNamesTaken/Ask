@@ -1,4 +1,4 @@
-module go-ask
+module ask
 
 go 1.24.2
 

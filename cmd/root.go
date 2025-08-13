@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"go-ask/ask_db"
-	"go-ask/config"
-	"go-ask/internal/debug"
+	"ask/ask_db"
+	"ask/config"
+	"ask/internal/debug"
 	"log"
 	"os"
 	"strings"
@@ -30,7 +30,7 @@ var (
 // NewRootCommand is used to combine viper and cobra
 func NewRootCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:   "go-ask [subcommand]",
+		Use:   "ask [subcommand]",
 		Short: "An Aggregated Snippet Knowledgebase written in Golang",
 		Long: `Ask (Aggregated Snippet Knowledgebase) by the OtherDave (https://github.com/clevernamestaken) is a CLI tool written in golang to save, edit, and share code snippets for terminal-based collaborative operations using MySql databases and structured TUI forms.
 
@@ -70,10 +70,11 @@ ask rm --prune
 
 ask  add archive.zip
 	#Add an archived zip to an existing database.
+	`,
 
-ask console
-	#Start a metasploit-like console to search for and use snippets (still in development)
-		`,
+//ask console
+//	#Start a metasploit-like console to search for and use snippets (still in development)
+//		`,
 	}
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.config/ask/config.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&debugFlag, "debug", "d", false, "enable debug output")

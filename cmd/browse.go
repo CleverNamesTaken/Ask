@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
-	"go-ask/ask_db"
-	"go-ask/internal/debug"
-	structs "go-ask/internal/model"
+	"ask/ask_db"
+	"ask/internal/debug"
+	structs "ask/internal/model"
 	"log"
 	"os"
 

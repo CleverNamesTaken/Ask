@@ -3,7 +3,7 @@ package ask_db
 import (
 	"database/sql"
 	"fmt"
-	"go-ask/internal/debug"
+	"ask/internal/debug"
 	"log"
 	"os"
 	"strings"

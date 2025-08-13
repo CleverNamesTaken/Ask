@@ -2,11 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"go-ask/ask_db"
+	"ask/ask_db"
 	"os"
 
 	"database/sql"
-	"go-ask/internal/debug"
+	"ask/internal/debug"
 
 	"github.com/spf13/cobra"
 )

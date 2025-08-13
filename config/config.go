@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"go-ask/internal/debug"
+	"ask/internal/debug"
 	"os"
 	"path/filepath"
 	"github.com/spf13/viper"

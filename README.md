@@ -137,7 +137,7 @@ mysqladmin -u root password 'newpassword'
 
 ```
 ask create template
-    #Use the quickstart option unless you already have a mysql server you'd like to use.
+    #Use the default option unless you already have a mysql server you'd like to use.
 ask add example.txt
 ask ls
 ask render example
@@ -163,6 +163,7 @@ ask edit example
 - [ ] implement heirarchy
     - [ ]	add suggestions from existing heirarchy in snippet forms.
     - [ ]	in the console, allow use with tab completion of available snippets to discover more
+- [ ] Support windows
 
 See the [open issues](https://github.com/CleverNamesTaken/Ask/issues) for a full list of proposed features (and known issues).
 
@@ -221,6 +222,11 @@ This tool was inspired by other great projects:
 * [Arsenal](https://github.com/Orange-Cyberdefense/arsenal)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+## Change log
+
+- v0.1.0 : First release
+- v0.1.1 : Fixed the overwrite of a config file and added some aliases.
 
 
 
