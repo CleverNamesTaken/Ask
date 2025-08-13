@@ -136,12 +136,30 @@ mysqladmin -u root password 'newpassword'
 ## Usage
 
 ```
-ask create template
-    #Use the default option unless you already have a mysql server you'd like to use.
-ask add example.txt
-ask ls
-ask render example
-ask edit example
+USAGE  
+         
+                                          
+    ask [command] [subcommand] [--flags]  
+                                          
+            
+  COMMANDS  
+            
+    add                         Add new snippets to the database
+    browse                      Browse snippets in the database. Aliased to 'ls'
+    completion [command]        Generate the autocompletion script for the specified shell
+    create [command]            Create config file, snippet template files, zip archive or the database schema
+    edit                        Edit an existing snippet
+    help [command]              Help about any command
+    remove [--flags]            Remove snippets from the database. Aliased to 'rm'
+    render [command] [--flags]  Render snippets
+    show                        Take a quick peek at a raw snippet, excluding the metadata. Aliased to 'cat'
+         
+  FLAGS  
+         
+    -c --config                 Config file (default is $HOME/.config/ask/config.yaml)
+    -d --debug                  Enable debug output
+    -h --help                   Help for ask
+    -v --version                Version for ask
 ```
 
 <!-- Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources. -->
