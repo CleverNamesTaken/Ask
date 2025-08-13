@@ -1,0 +1,6 @@
+PORT: 2220
+USER: bandit2
+IP: bandit.labs.overthewire.org
+PASSWORD: 263JGJPfgU6LtdEvgfWU1XP5yac29mFx
+FILENAME: './--spaces\ in\ this\ filename--'
+

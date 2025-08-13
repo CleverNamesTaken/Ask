@@ -8,7 +8,7 @@ import (
 	"ask/ask_db"
 	"ask/internal/debug"
 	structs "ask/internal/model"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -94,12 +94,12 @@ func render(snippetID string, db *sql.DB) error {
 				value := snippetStruct.Variables[variable].DefaultValue
 				replaceMap["{{ "+variable+" }}"] = value
 				if VarSave == true {
-					yamlLine = yamlLine + variable + ": " + value + "\n"
+					//I anticipate that if the value has single or double quotes, this line could become problematic
+					yamlLine = yamlLine + variable + ": '" + value + "'\n"
 				}
 
 			}
 
-			snippetStruct.SnippetText = snippetStruct.SnippetText
 			for variable, value := range replaceMap {
 				snippetStruct.SnippetText = strings.ReplaceAll(snippetStruct.SnippetText, variable, value)
 
@@ -122,7 +122,7 @@ func render(snippetID string, db *sql.DB) error {
 		}
 		defer yamlFile.Close()
 
-		yamlData, err := ioutil.ReadAll(yamlFile)
+		yamlData, err := io.ReadAll(yamlFile)
 		if err != nil {
 			return err
 		}

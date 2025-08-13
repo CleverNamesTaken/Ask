@@ -146,6 +146,20 @@ ask edit example
 
 <!-- Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources. -->
 
+### Overthewire example
+
+```
+git clone git@github.com:CleverNamesTaken/Ask.git
+go build -o ask
+chmod +x ask
+./ask add archive.zip
+2
+    #Create the sqlite database just to start going
+./ask render bandit0
+./ask render bandit1
+./ask render bandit2 -l examples/bandit2.yaml
+```
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
@@ -153,8 +167,8 @@ ask edit example
 <!-- ROADMAP -->
 ## Roadmap
 
-- [ ] Create a default zip archive with some basic snippets
-- [ ] Create tutorial on how to use variable yamls to make rendering easier
+- [x] Create a default zip archive with some basic snippets
+- [x] Create tutorial on how to use variable yamls to make rendering easier
 - [ ] vscode snippet format for rendering
 - [ ] implement tagging system for searching
     - [ ] tab completion for tags in TUI
@@ -164,6 +178,7 @@ ask edit example
     - [ ]	add suggestions from existing heirarchy in snippet forms.
     - [ ]	in the console, allow use with tab completion of available snippets to discover more
 - [ ] Support windows
+- [ ] Unit testing
 
 See the [open issues](https://github.com/CleverNamesTaken/Ask/issues) for a full list of proposed features (and known issues).
 

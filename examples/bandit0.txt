@@ -1,0 +1,9 @@
+ssh -p 2220 bandit0@bandit.labs.overthewire.org
+yes
+bandit0
+ls
+cat readme
+exit
+
+	#nextsnippet
+	bandit1

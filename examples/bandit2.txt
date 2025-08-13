@@ -1,0 +1,6 @@
+ssh -p {{ PORT }} {{ USER }}@{{ IP }}
+{{ PASSWORD }}
+ls 
+cat {{ FILENAME }}
+exit
+

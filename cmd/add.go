@@ -746,6 +746,9 @@ func ingestText(snippetFile string, db *sql.DB) error {
 		log.Fatal(err)
 		return err
 	}
+
+
+
 	defer file.Close()
 
 	byteValue, _ := io.ReadAll(file)
@@ -765,6 +768,26 @@ func ingestText(snippetFile string, db *sql.DB) error {
 	variables, err := findVariables(rawText)
 	// process variables to be a map with empty fields
 
+	//Escape any escape characters
+	
+	escaped := strings.ReplaceAll(string(rawText), `\`, `\\`)
+
+
+	tmpFile, err := os.CreateTemp("", snippetName + "temp-*.txt")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmpFile.Name())
+
+	_, err = tmpFile.Write([]byte(escaped))
+	if err != nil {
+		return err
+	}
+
+	tmpFile.Close()
+
+
+
 	Variables := make(map[string]*structs.Variable, len(variables))
 	for key := range variables {
 		Variables[key] = &structs.Variable{}
@@ -775,11 +798,11 @@ func ingestText(snippetFile string, db *sql.DB) error {
 	newSnippet = snippetWizard(newSnippet, db)
 
 	// write the yaml
-	newSnippet.SnippetFile = snippetFile
+	newSnippet.SnippetFile = tmpFile.Name()
 	newSnippet.Version = "0.1.0"
 
 	//  Create temp file
-	tempYamlHandle, err := ioutil.TempFile("", "temp-*.yaml")
+	tempYamlHandle, err := os.CreateTemp("", "temp-*.yaml")
 	if err != nil {
 		log.Fatal(err)
 	}

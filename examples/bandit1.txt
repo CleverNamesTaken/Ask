@@ -1,0 +1,8 @@
+ssh -p 2220 bandit1@bandit.labs.overthewire.org
+yes
+{{ PASSWORD }}
+ls
+cat "./-"
+exit
+	#nextsnippet
+	bandit2
