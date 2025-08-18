@@ -187,7 +187,7 @@ chmod +x ask
 
 - [x] Create a default zip archive with some basic snippets
 - [x] Create tutorial on how to use variable yamls to make rendering easier
-- [ ] vscode snippet format for rendering
+- [x] vscode snippet format for rendering
 - [ ] implement tagging system for searching
     - [ ] tab completion for tags in TUI
 - [ ] interactive metasploit-like console for searching
@@ -260,6 +260,7 @@ This tool was inspired by other great projects:
 
 - v0.1.0 : First release
 - v0.1.1 : Fixed the overwrite of a config file and added some aliases.
+- v0.2.0 : VSCode snippet rendering
 
 
 

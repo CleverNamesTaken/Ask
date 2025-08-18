@@ -389,31 +389,25 @@ func processVSCode(snippetID string, db *sql.DB) (processed bool, err error) {
 	//enclose in quotes
 
 	var processedBody string
+	snippetData.SnippetText = "--------------Snippet Text-----------------\n" + snippetData.SnippetText
 
 	for _, line := range strings.Split(bodySection+variableSection+snippetData.SnippetText, "\n") {
+		//line = strings.ReplaceAll(line, "$", "\\$")
+		line = strings.ReplaceAll(line, "\\", "\\\\")
+		line = strings.ReplaceAll(line, "\"", "\\\"")
+
 		processedBody += fmt.Sprintf("\"%s\",\n", line)
 	}
 
-	fullText := headerSection + processedBody // + bodySection + "endsnippet\n"
-	fmt.Printf("%s", fullText)
-	/*
-			//NEED TO GO THROUGH AND REPLACE THE VARIABLES WITH THE INDEX NUMBER
-			//Also might need to escape some things to make this work like $, backticks and others.
-		}
+	processedBody = processedBody + "]\n"
+	fullText := headerSection + processedBody + "}"
 
-		bodySection = "--------------Snippet Body ----------------\n"
-		bodySection = fmt.Sprintf("%s$0%s", bodySection, snippetData.SnippetText)
+	snippetFileName := fmt.Sprintf("%s_v%s.json", snippetData.Name, snippetData.Version)
+	err = writeSnippet(fullText, snippetFileName)
+	if err != nil {
+		return false, err
+	}
 
-		//Create the snippet body section
-
-		//bring it all together and write to file
-		fullText := headerSection + variableSection + bodySection + "endsnippet\n"
-
-		err = writeSnippet(fullText, snippetFileName)
-		if err != nil {
-			return false, err
-		}
-	*/
 	return true, nil
 }
 
@@ -648,8 +642,6 @@ var (
 		Long:  `Extract highest version snippet from the database and render it in a variety of formats.  Currently supports vscode, UltiSnips and VSCode format`,
 		//Args:  cobra.ExactArgs(1),
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Fprintf(os.Stdout, "[!] VScode rendering is not yet implemented.")
-
 			processedSnippets, err := vscodeRender(ask_db.DB)
 			if err != nil {
 				fmt.Fprintf(os.Stdout, "[!] Failed to render ultisnips snippets: %w", err)
