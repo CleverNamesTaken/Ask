@@ -3,15 +3,16 @@ package cmd
 
 import (
 	"archive/zip"
+	"ask/ask_db"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"ask/ask_db"
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
@@ -488,7 +489,7 @@ func snippetWizard(snippetStruct structs.Snippet, _ *sql.DB) (SnippetStruct stru
 		defaultPrompt := fmt.Sprintf("What are default values of %s? Use | to delimit options", variable)
 		fieldText := huh.NewText().
 			Editor("vim").
-			Lines(15).
+			//Lines(15).
 			Title(descriptionPrompt).
 			Placeholder("This is a description of the variable.  How you get it or why it matters.").
 			//Is there a bug here?  When I enter the editor to change the value, the result is assigned for all of the variables in the group, not just the specific variable.
@@ -521,7 +522,7 @@ func snippetWizard(snippetStruct structs.Snippet, _ *sql.DB) (SnippetStruct stru
 		form = huh.NewForm(
 			huh.NewGroup(globalFields...),
 			huh.NewGroup(varFields...),
-		)
+		).WithProgramOptions(tea.WithAltScreen())
 	} else {
 		form = huh.NewForm(
 			huh.NewGroup(globalFields...),
@@ -747,8 +748,6 @@ func ingestText(snippetFile string, db *sql.DB) error {
 		return err
 	}
 
-
-
 	defer file.Close()
 
 	byteValue, _ := io.ReadAll(file)
@@ -769,11 +768,10 @@ func ingestText(snippetFile string, db *sql.DB) error {
 	// process variables to be a map with empty fields
 
 	//Escape any escape characters
-	
+
 	escaped := strings.ReplaceAll(string(rawText), `\`, `\\`)
 
-
-	tmpFile, err := os.CreateTemp("", snippetName + "temp-*.txt")
+	tmpFile, err := os.CreateTemp("", snippetName+"temp-*.txt")
 	if err != nil {
 		return err
 	}
@@ -785,8 +783,6 @@ func ingestText(snippetFile string, db *sql.DB) error {
 	}
 
 	tmpFile.Close()
-
-
 
 	Variables := make(map[string]*structs.Variable, len(variables))
 	for key := range variables {
