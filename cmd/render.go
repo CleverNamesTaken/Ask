@@ -1,13 +1,13 @@
 package cmd
 
 import (
+	"ask/ask_db"
+	"ask/internal/debug"
+	structs "ask/internal/model"
 	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"ask/ask_db"
-	"ask/internal/debug"
-	structs "ask/internal/model"
 	"io"
 	"log"
 	"os"
@@ -316,47 +316,104 @@ func processVSCode(snippetID string, db *sql.DB) (processed bool, err error) {
 		return false, nil
 	}
 
-	var headerSection, variableSection, bodySection string
-	snippetFileName := fmt.Sprintf("%s_v%s.json", snippetData.Name, snippetData.Version)
+	var headerSection string //, variableSection, bodySection string
+	//snippetFileName := fmt.Sprintf("%s_v%s.json", snippetData.Name, snippetData.Version)
 
 	// Create the header/metadata section
 	// Figure out the format for VS code rendering
 
-	headerSection = fmt.Sprintf("snippet %s \"%s\"\n\n", snippetData.Name, snippetData.Description)
+	/*
+		"example": {
+		  "prefix": "trigger",
+		  "description": "example"
+		  "body": [
+		    "this is my snippet"
+		  ],
+		}
+	*/
 
-	metaTable := "--------------Snippet Information----------\n"
-	headerSection = fmt.Sprintf("%s%s", headerSection, metaTable)
+	headerSection = fmt.Sprintf("\n\"%s_v%s\": {\n\t \"prefix\": \"%s\",\n\t \"description\": \"%s\"\n\t \"body\": [\n", snippetData.Name, snippetData.Version, snippetData.Name, snippetData.Description)
 
+	var bodyTable bytes.Buffer
+	tw := table.NewWriter()
+	tw.SetOutputMirror(&bodyTable)
+	tw.AppendHeader(table.Row{"Name", "Version", "Description"})
+	tw.AppendRow(table.Row{snippetData.Name, snippetData.Version, snippetData.Description})
+	tw.SetStyle(table.StyleRounded) // Optional: You can use StyleLight, StyleBold, etc.
+	tw.Render()
+
+	// Merge everything into bodySection
+	metaSection := "--------------Snippet Info ----------------\n"
+	bodySection := metaSection + bodyTable.String()
+
+	var variableSection string
+	var variableKey []string
 	//If there are no variables, skip that section
 	if len(snippetData.Variables) > 0 {
 		debug.Print("[!] The '%s_v%s' snippet has variables.  Processing them now", snippetData.Name, snippetData.Version)
 		variableSection = "--------------Variable Section-------------\n"
+
+		var variableTable bytes.Buffer
+		tw := table.NewWriter()
+		tw.SetOutputMirror(&variableTable)
+		tw.AppendHeader(table.Row{"Variable Name", "Value", "Example Value", "Description"})
+
 		for variable, variableInfo := range snippetData.Variables {
-			// GRAB THE INDEX NUMBER FOR THE VARIABLE NUMBER.  Probably use a VARIABLE_INDEX variable that I can grab through some function
-			// CREATE A TABLE
+			//The index for the variables is not set because maps are unordered.  If I want to have consistent orders for the variables, I may have to rethink my Variables struct.
+			variableKey = append(variableKey, variable)
 			if variableInfo.DefaultValue != "" {
-				variableSection = fmt.Sprintf("%s ${VARIABLE_INDEX:%s}  %s %s    %s\n", variableSection, variableInfo.DefaultValue, variable, variableInfo.ExampleValue, variableInfo.Description)
+				//Need to fix the index numbers here
+				tw.AppendRow(table.Row{variable, "${" + strconv.Itoa(len(variableKey)*10) + ":" + variableInfo.DefaultValue + "}", variableInfo.ExampleValue, variableInfo.Description})
 			} else {
-				variableSection = fmt.Sprintf("%s ${VARIABLE_INDEX}  %s %s    %s\n", variableSection, variable, variableInfo.ExampleValue, variableInfo.Description)
+				//Need to fix the index numbers here
+				tw.AppendRow(table.Row{variable, "${" + strconv.Itoa(len(variableKey)*10) + "}", variableInfo.ExampleValue, variableInfo.Description})
 			}
 		}
+		tw.SetStyle(table.StyleRounded)
+		tw.Render()
+		variableSection += variableTable.String()
 
-		//NEED TO GO THROUGH AND REPLACE THE VARIABLES WITH THE INDEX NUMBER
-		//Also might need to escape some things to make this work like $, backticks and others.
 	}
 
-	bodySection = "--------------Snippet Body ----------------\n"
-	bodySection = fmt.Sprintf("%s$0%s", bodySection, snippetData.SnippetText)
+	//make variable substitutions
+	//Do the ultisnips escapes
+	snippetData.SnippetText = strings.ReplaceAll(snippetData.SnippetText, "`", "\\`")
+	snippetData.SnippetText = strings.ReplaceAll(snippetData.SnippetText, "$", "\\$")
 
-	//Create the snippet body section
-
-	//bring it all together and write to file
-	fullText := headerSection + variableSection + bodySection + "endsnippet\n"
-
-	err = writeSnippet(fullText, snippetFileName)
-	if err != nil {
-		return false, err
+	//Replace the variables
+	for index, key := range variableKey {
+		debug.Print("[*] Replacing {{ %s }} with $%s", key, strconv.Itoa((index+1)*10))
+		snippetData.SnippetText = strings.ReplaceAll(snippetData.SnippetText, "{{ "+key+" }}", "$"+strconv.Itoa((index+1)*10))
 	}
+
+	//enclose in quotes
+
+	var processedBody string
+
+	for _, line := range strings.Split(bodySection+variableSection+snippetData.SnippetText, "\n") {
+		processedBody += fmt.Sprintf("\"%s\",\n", line)
+	}
+
+	fullText := headerSection + processedBody // + bodySection + "endsnippet\n"
+	fmt.Printf("%s", fullText)
+	/*
+			//NEED TO GO THROUGH AND REPLACE THE VARIABLES WITH THE INDEX NUMBER
+			//Also might need to escape some things to make this work like $, backticks and others.
+		}
+
+		bodySection = "--------------Snippet Body ----------------\n"
+		bodySection = fmt.Sprintf("%s$0%s", bodySection, snippetData.SnippetText)
+
+		//Create the snippet body section
+
+		//bring it all together and write to file
+		fullText := headerSection + variableSection + bodySection + "endsnippet\n"
+
+		err = writeSnippet(fullText, snippetFileName)
+		if err != nil {
+			return false, err
+		}
+	*/
 	return true, nil
 }
 
@@ -593,14 +650,12 @@ var (
 		Run: func(_ *cobra.Command, _ []string) {
 			fmt.Fprintf(os.Stdout, "[!] VScode rendering is not yet implemented.")
 
-			/*
-				processedSnippets, err := vscodeRender(ask_db.DB)
-				if err != nil {
-					fmt.Fprintf(os.Stdout,"[!] Failed to render ultisnips snippets: %w",err)
-					return
-				}
-				fmt.Fprintf(os.Stdout,"[+] VSCode snippets rendered to %s: %s",OutputDir,strconv.Itoa(processedSnippets))
-			*/
+			processedSnippets, err := vscodeRender(ask_db.DB)
+			if err != nil {
+				fmt.Fprintf(os.Stdout, "[!] Failed to render ultisnips snippets: %w", err)
+				return
+			}
+			fmt.Fprintf(os.Stdout, "[+] VSCode snippets rendered to %s: %s", OutputDir, strconv.Itoa(processedSnippets))
 		},
 	}
 )
