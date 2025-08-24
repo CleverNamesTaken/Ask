@@ -1,12 +1,12 @@
 package cmd
 
 import (
-	"bytes"
-	"database/sql"
-	"fmt"
 	"ask/ask_db"
 	"ask/internal/debug"
 	structs "ask/internal/model"
+	"bytes"
+	"database/sql"
+	"fmt"
 	"log"
 	"os"
 
@@ -91,12 +91,6 @@ func browse(searchTerm string, db *sql.DB) error {
 	tw.SetStyle(table.StyleRounded) // Optional: You can use StyleLight, StyleBold, etc.
 	tw.Render()
 	fmt.Fprintf(os.Stdout, resultsTable.String())
-	fmt.Fprintf(os.Stdout, "\n\n [*] What do you want to do next?\n")
-	fmt.Fprintf(os.Stdout, "\n\t ask render <SnippetName OR SnippetID>")
-	fmt.Fprintf(os.Stdout, "\n\t ask cat <SnippetName OR SnippetID>")
-	fmt.Fprintf(os.Stdout, "\n\t ask edit <SnippetName OR SnippetID>")
-	fmt.Fprintf(os.Stdout, "\n\t ask rm <SnippetName OR SnippetID>")
-	fmt.Fprintf(os.Stdout, "\n\t ask add <snippetFile OR snippetYaml OR snippetArchive>")
 	return nil
 }
 
@@ -128,6 +122,12 @@ ask browse example
 				fmt.Fprintf(os.Stdout, "[!] Ran into error executing browse function: %w", err)
 				return
 			}
+			fmt.Fprintf(os.Stdout, "\n\n [*] What do you want to do next?\n")
+			fmt.Fprintf(os.Stdout, "\n\t ask render <SnippetName OR SnippetID>")
+			fmt.Fprintf(os.Stdout, "\n\t ask cat <SnippetName OR SnippetID>")
+			fmt.Fprintf(os.Stdout, "\n\t ask edit <SnippetName OR SnippetID>")
+			fmt.Fprintf(os.Stdout, "\n\t ask rm <SnippetName OR SnippetID>")
+			fmt.Fprintf(os.Stdout, "\n\t ask add <snippetFile OR snippetYaml OR snippetArchive>")
 
 		},
 	}

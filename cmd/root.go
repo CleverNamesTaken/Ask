@@ -1,12 +1,12 @@
 package cmd
 
 import (
-	"context"
-	"database/sql"
-	"fmt"
 	"ask/ask_db"
 	"ask/config"
 	"ask/internal/debug"
+	"context"
+	"database/sql"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -32,7 +32,7 @@ func NewRootCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "ask [subcommand]",
 		Short: "An Aggregated Snippet Knowledgebase written in Golang",
-		Long: `Ask (Aggregated Snippet Knowledgebase) by the OtherDave (https://github.com/clevernamestaken) is a CLI tool written in golang to save, edit, and share code snippets for terminal-based collaborative operations using MySql databases and structured TUI forms.
+		Long: `Ask (Aggregated Snippet Knowledgebase) by the OtherDave (https://github.com/clevernamestaken) is a CLI tool written in golang to save, edit, and share code snippets for terminal-based collaborative operations using databases and structured TUI forms.
 
 EXAMPLES
 ask create config
@@ -70,11 +70,10 @@ ask rm --prune
 
 ask  add archive.zip
 	#Add an archived zip to an existing database.
-	`,
 
-//ask console
-//	#Start a metasploit-like console to search for and use snippets (still in development)
-//		`,
+ask console
+	#Start a metasploit-like console to search for and use snippets
+				`,
 	}
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.config/ask/config.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&debugFlag, "debug", "d", false, "enable debug output")
@@ -85,6 +84,7 @@ ask  add archive.zip
 	rootCmd.AddCommand(renderCmd)
 	rootCmd.AddCommand(showCmd)
 	rootCmd.AddCommand(browseCmd)
+	rootCmd.AddCommand(consoleCmd)
 
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, _ []string) error {
 		debug.Enabled = debugFlag

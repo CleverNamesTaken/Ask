@@ -492,7 +492,6 @@ func snippetWizard(snippetStruct structs.Snippet, _ *sql.DB) (SnippetStruct stru
 			//Lines(15).
 			Title(descriptionPrompt).
 			Placeholder("This is a description of the variable.  How you get it or why it matters.").
-			//Is there a bug here?  When I enter the editor to change the value, the result is assigned for all of the variables in the group, not just the specific variable.
 			Value(&tempVarStruct.Description).
 			Validate(func(str string) error {
 				if len(str) > 255 {
@@ -521,7 +520,8 @@ func snippetWizard(snippetStruct structs.Snippet, _ *sql.DB) (SnippetStruct stru
 	if len(snippetStruct.Variables) > 0 {
 		form = huh.NewForm(
 			huh.NewGroup(globalFields...),
-			huh.NewGroup(varFields...),
+			//The display when looking at the variables does not seem quite right.
+			huh.NewGroup(varFields...).WithHeight(50),
 		).WithProgramOptions(tea.WithAltScreen())
 	} else {
 		form = huh.NewForm(

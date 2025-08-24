@@ -190,11 +190,13 @@ chmod +x ask
 - [x] vscode snippet format for rendering
 - [ ] implement tagging system for searching
     - [ ] tab completion for tags in TUI
-- [ ] interactive metasploit-like console for searching
+- [x] interactive metasploit-like console for searching
+    - [ ] Set flags for rendering
+    - [ ] set global variables
 - [ ] fuzzy searching
 - [ ] implement heirarchy
     - [ ]	add suggestions from existing heirarchy in snippet forms.
-    - [ ]	in the console, allow use with tab completion of available snippets to discover more
+    - [x]	in the console, allow use with tab completion of available snippets to discover more
 - [ ] Support windows
 - [ ] Unit testing
 
@@ -261,6 +263,7 @@ This tool was inspired by other great projects:
 - v0.1.0 : First release
 - v0.1.1 : Fixed the overwrite of a config file and added some aliases.
 - v0.2.0 : VSCode snippet rendering
+- v0.3.0 : Ask console
 
 
 
