@@ -263,6 +263,7 @@ This tool was inspired by other great projects:
 - v0.1.1 : Fixed the overwrite of a config file and added some aliases.
 - v0.2.0 : VSCode snippet rendering
 - v0.3.0 : Ask console
+- v0.3.1 : console flags, tab completion
 
 
 
