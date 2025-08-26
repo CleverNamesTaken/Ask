@@ -191,13 +191,12 @@ chmod +x ask
 - [ ] implement tagging system for searching
     - [ ] tab completion for tags in TUI
 - [x] interactive metasploit-like console for searching
-    - [ ] Set flags for rendering
+    - [x] Set flags for rendering, output file, clipboard
     - [ ] set global variables
 - [ ] fuzzy searching
 - [ ] implement heirarchy
     - [ ]	add suggestions from existing heirarchy in snippet forms.
     - [x]	in the console, allow use with tab completion of available snippets to discover more
-- [ ] Support windows
 - [ ] Unit testing
 
 See the [open issues](https://github.com/CleverNamesTaken/Ask/issues) for a full list of proposed features (and known issues).

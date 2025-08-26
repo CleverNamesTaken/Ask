@@ -6,9 +6,14 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"slices"
+
+	"github.com/spf13/pflag"
+	"golang.design/x/clipboard"
 
 	"github.com/abiosoft/ishell/v2"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -17,9 +22,8 @@ import (
 
 var (
 	consoleCmd = &cobra.Command{
-		Use:     "console",
-		Short:   "Start the ask console",
-		Aliases: []string{"ls"},
+		Use:   "console",
+		Short: "Start the ask console",
 		Long: `Start the ask console, which was built to feel like the metasploit console to search for snippets, set variable values, and render them.
 `,
 		Run: func(_ *cobra.Command, args []string) {
@@ -28,12 +32,44 @@ var (
 	}
 )
 
+func systemCommand(c *ishell.Context) {
+	if c.Args[0] == "cd" {
+		dir := c.Args[1]
+		err := os.Chdir(dir)
+		if err != nil {
+			c.Println("Error changing directory:", err)
+
+		}
+		return
+	}
+
+	cmd := exec.Command("bash", "-c", strings.Join(c.Args, " "))
+
+	out, err := cmd.Output()
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+	c.Println(string(out))
+	return
+
+}
+
 func askConsole() {
 	shell := ishell.New()
 
 	shell.Println("ask interactive shell")
 
 	db := ask_db.DB
+
+	shell.AddCmd(&ishell.Cmd{
+		Name: "!",
+		Help: "Execute a shell command",
+		Func: func(c *ishell.Context) {
+			//need to add a catch to allow !<cmd> to also work
+			systemCommand(c)
+		},
+	})
+
 	shell.AddCmd(&ishell.Cmd{
 		Name: "search",
 		Help: "search for an existing snippet",
@@ -106,6 +142,15 @@ func useConsole(snippetString string, shell *ishell.Shell) error {
 	variableMap := setVariables(snippetData.Variables)
 
 	sub.AddCmd(&ishell.Cmd{
+		Name: "!",
+		Help: "Execute a shell command",
+		Func: func(sc *ishell.Context) {
+			//need to add a catch to allow !<cmd> to also work
+			systemCommand(sc)
+		},
+	})
+
+	sub.AddCmd(&ishell.Cmd{
 		Name: "show",
 		Help: "Show information about a snippet",
 		Func: func(sc *ishell.Context) {
@@ -175,20 +220,62 @@ func useConsole(snippetString string, shell *ishell.Shell) error {
 	*/
 
 	sub.AddCmd(&ishell.Cmd{
-		Name:    "render",
-		Help:    "Render the snippet",
-		Aliases: []string{"run", "exploit"},
+		Name: "render",
+		Help: `Render the snippet with the variables replaced.  This command currently supports three flags:
+
+		--output, -o,		Save the rendered snippet to the designated file.
+		--clip, -x,		Copy the rendered snippet to the clipboard.
+		--quiet,-q,		Do not render the output to stdout.  If --clip or --output are not used, then there is no point in using this flag.
+
+		Aliases: run, exploit, r
+
+		`,
+		Aliases: []string{"run", "exploit", "r"},
 		Func: func(sc *ishell.Context) {
-			//take flags for render to clipboard
-			//take flags for render to file
+
+			fs := pflag.NewFlagSet("output", pflag.ContinueOnError)
+			output := fs.StringP("output", "o", "/dev/null", "File to save output of rendering.")
+			clip := fs.BoolP("clip", "x", false, "Copy to clipboard.")
+			quiet := fs.BoolP("quiet", "q", false, "Do not print to stdout.  Without --output or --clip, using this flag would make rendering useless.")
+			fs.Parse(sc.Args)
 
 			snippetText := snippetData.SnippetText
 
 			for variable, value := range variableMap {
 				snippetText = strings.ReplaceAll(snippetText, "{{ "+variable+" }}", value)
 			}
+			if *output != "/dev/null" {
+				//fix from here
+				outputDir := filepath.Dir(*output)
+				sc.Println(outputDir)
+				_, err := os.Stat(outputDir)
+				if os.IsNotExist(err) {
+					// Directory does not exist, so create it and all parent directories
+					err := os.MkdirAll(outputDir, os.ModePerm)
+					if err != nil {
+						sc.Print("%s\n", fmt.Errorf("failed to create directory: %w", err))
+						return
+					}
+				}
+				err = os.WriteFile(*output, []byte(snippetText), 0644)
+				if err != nil {
+					errorMsg := fmt.Errorf("failed to create directory: %w", err)
+					sc.Print("Failed to write: %s\n", errorMsg)
+					return
+				}
 
-			sc.Printf(snippetText + "\n")
+			}
+			if *clip {
+				err := clipboard.Init()
+				if err != nil {
+					panic(err)
+				}
+				clipboard.Write(clipboard.FmtText, []byte(snippetText))
+
+			}
+			if !*quiet {
+				sc.Printf(snippetText + "\n")
+			}
 		},
 	})
 	sub.AddCmd(&ishell.Cmd{
@@ -220,16 +307,25 @@ func useConsole(snippetString string, shell *ishell.Shell) error {
 		Name: "use",
 		Help: "use an existing snippet",
 		Completer: func([]string) []string {
-			var snippetNames []string
 
 			stmt, _ := db.Prepare("SELECT name FROM snippets")
 			rows, _ := stmt.Query()
 
-			var snippetName string
+			snippetNames := []string{}
+			seen := make(map[string]struct{})
+
 			for rows.Next() {
-				rows.Scan(&snippetName)
-				snippetNames = append(snippetNames, snippetName)
+				var snippetName string
+				if err := rows.Scan(&snippetName); err != nil {
+					continue
+				}
+
+				if _, exists := seen[snippetName]; !exists {
+					snippetNames = append(snippetNames, snippetName)
+					seen[snippetName] = struct{}{}
+				}
 			}
+
 			return snippetNames
 		},
 		Func: func(sc *ishell.Context) {
