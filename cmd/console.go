@@ -188,16 +188,21 @@ func useConsole(snippetString string, shell *ishell.Shell) error {
 		Name: "set",
 		Help: "set variables",
 		Completer: func(args []string) []string {
-			if len(args) < 1 {
-				var variables []string
-				for variable := range snippetData.Variables {
-					variables = append(variables, variable)
-				}
-				return variables
-			} else {
-				//in the future, might suggest default or multichoice
-				return nil
+			var variables []string
+			for variable := range snippetData.Variables {
+				variables = append(variables, variable)
 			}
+			if len(args) == 0 {
+				return variables
+			} else if len(args) == 1 {
+				defaultValue := snippetData.Variables[args[0]].DefaultValue 
+				if defaultValue != "" && !strings.Contains(defaultValue,"|") {
+					return []string{defaultValue}
+				} else if defaultValue != "" {
+					return strings.Split(defaultValue,"|")
+				}
+			}
+				return nil
 		},
 
 		Func: func(sc *ishell.Context) {

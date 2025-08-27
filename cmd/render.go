@@ -361,9 +361,11 @@ func processVSCode(snippetID string, db *sql.DB) (processed bool, err error) {
 		for variable, variableInfo := range snippetData.Variables {
 			//The index for the variables is not set because maps are unordered.  If I want to have consistent orders for the variables, I may have to rethink my Variables struct.
 			variableKey = append(variableKey, variable)
-			if variableInfo.DefaultValue != "" {
+			if variableInfo.DefaultValue != "" && !strings.Contains(variableInfo.DefaultValue,"|") {
 				//Need to fix the index numbers here
 				tw.AppendRow(table.Row{variable, "${" + strconv.Itoa(len(variableKey)*10) + ":" + variableInfo.DefaultValue + "}", variableInfo.ExampleValue, variableInfo.Description})
+			} else if strings.Contains(variableInfo.DefaultValue,"|") {
+				tw.AppendRow(table.Row{variable, "${" + strconv.Itoa(len(variableKey)*10) + "|" + strings.ReplaceAll(variableInfo.DefaultValue,"|",",") + "|}", variableInfo.ExampleValue, variableInfo.Description})
 			} else {
 				//Need to fix the index numbers here
 				tw.AppendRow(table.Row{variable, "${" + strconv.Itoa(len(variableKey)*10) + "}", variableInfo.ExampleValue, variableInfo.Description})
@@ -460,10 +462,12 @@ func processUlti(snippetID string, db *sql.DB) (processed bool, err error) {
 		for variable, variableInfo := range snippetData.Variables {
 			//The index for the variables is not set because maps are unordered.  If I want to have consistent orders for the variables, I may have to rethink my Variables struct.
 			variableKey = append(variableKey, variable)
-			if variableInfo.DefaultValue != "" {
+			if variableInfo.DefaultValue != "" && !strings.Contains(variableInfo.DefaultValue, "|") {
 				//Need to fix the index numbers here
 				tw.AppendRow(table.Row{variable, "${" + strconv.Itoa(len(variableKey)*10) + ":" + variableInfo.DefaultValue + "}", variableInfo.ExampleValue, variableInfo.Description})
-			} else {
+			} else if strings.Contains(variableInfo.DefaultValue, "|" ) {
+				tw.AppendRow(table.Row{variable, "${" + strconv.Itoa(len(variableKey)*10) + "|" + strings.ReplaceAll(variableInfo.DefaultValue,"|",",") + "|}", variableInfo.ExampleValue, variableInfo.Description})
+			}else {
 				//Need to fix the index numbers here
 				tw.AppendRow(table.Row{variable, "${" + strconv.Itoa(len(variableKey)*10) + "}", variableInfo.ExampleValue, variableInfo.Description})
 			}

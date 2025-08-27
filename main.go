@@ -1,6 +1,5 @@
 //EASY
 
-// finish console.  unique tab completition.  save var assignments. render
 // defer close for everything that does db.Query
 //Check for graceful error handling everywhere
 // VarSave output directory

@@ -136,17 +136,61 @@ mysqladmin -u root password 'newpassword'
 ## Usage
 
 ```
-USAGE  
+  Ask (Aggregated Snippet Knowledgebase) by the OtherDave (https://github.com/clevernamestaken) is a CLI tool written in
+  golang to save, edit, and share code snippets for terminal-based collaborative operations using databases and         
+  structured TUI forms.                                                                                                 
+                                                                                                                        
+  EXAMPLES                                                                                                              
+  ask create config                                                                                                     
+      #Create the config file to start interacting with a database or create a new one                                  
+                                                                                                                        
+  ask create template                                                                                                   
+      #Create an example snippet file                                                                                   
+                                                                                                                        
+  ask add example.txt                                                                                                   
+      #Ingest the snippet file into the database                                                                        
+                                                                                                                        
+  ask cat example                                                                                                       
+      #Look at the raw snippet text for the snippet named "example"                                                     
+                                                                                                                        
+  ask edit example                                                                                                      
+      #Edit a snippet called "example"                                                                                  
+                                                                                                                        
+  ask ls                                                                                                                
+      #Examine which snippets are in the database                                                                       
+                                                                                                                        
+  ask ls mple                                                                                                           
+      #Examine which snippets in the database have a name containing the string "mple"                                  
+                                                                                                                        
+  ask render example                                                                                                    
+      #Render the snippet named "example" to stdout after being prompted to fill out the variables                      
+                                                                                                                        
+  ask render text --all --outdir ./text_snippets                                                                        
+      #Dump the entire database in text format to a directory called ./text_snippets                                    
+                                                                                                                        
+  ask render create zip --outfile archive.zip                                                                           
+      #Create an archive of the database                                                                                
+                                                                                                                        
+  ask rm --prune                                                                                                        
+      #Remove all of the outdated snippets from the database                                                            
+                                                                                                                        
+  ask  add archive.zip                                                                                                  
+      #Add an archived zip to an existing database.                                                                     
+                                                                                                                        
+  ask console                                                                                                           
+      #Start a metasploit-like console to search for and use snippets                                                   
+                                                                                                                        
          
-                                          
+  USAGE  
+         
     ask [command] [subcommand] [--flags]  
-                                          
             
   COMMANDS  
             
     add                         Add new snippets to the database
     browse                      Browse snippets in the database. Aliased to 'ls'
     completion [command]        Generate the autocompletion script for the specified shell
+    console                     Start the ask console
     create [command]            Create config file, snippet template files, zip archive or the database schema
     edit                        Edit an existing snippet
     help [command]              Help about any command
@@ -264,6 +308,7 @@ This tool was inspired by other great projects:
 - v0.2.0 : VSCode snippet rendering
 - v0.3.0 : Ask console
 - v0.3.1 : console flags, tab completion
+- v0.3.2 : Added choices for default values in ultisnips and vscode rendering.  Also tab completion for default value and choices in console.
 
 
 
