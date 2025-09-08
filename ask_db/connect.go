@@ -1,9 +1,9 @@
 package ask_db
 
 import (
+	"ask/internal/debug"
 	"database/sql"
 	"fmt"
-	"ask/internal/debug"
 	"log"
 	"os"
 	"strings"

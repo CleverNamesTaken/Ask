@@ -4,13 +4,12 @@ package cmd
 
 import (
 	"archive/zip"
+	"ask/config"
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"ask/config"
 	"io"
 	"os"
-	"strconv"
 
 	//	"strings"
 	//	"database/sql"
@@ -27,6 +26,12 @@ var Yaml bool
 
 // ArchiveFile is a flag value
 var ArchiveFile string
+
+// IncludeTag is a flag value
+var IncludeTag []string
+
+// ExcludeTag is a flag value
+var ExcludeTag []string
 
 func createYaml(snippetID string, db *sql.DB) (yamlFile string, err error) {
 	//create yaml based on the snippet id
@@ -54,6 +59,15 @@ func createYaml(snippetID string, db *sql.DB) (yamlFile string, err error) {
 
 	json.Unmarshal([]byte(jsonVar), &snippetData.Variables)
 
+	// add tags
+
+	tagMap, err := getTags(snippetID, db)
+
+	for tag, _ := range tagMap {
+		snippetData.Tags = append(snippetData.Tags, tag)
+
+	}
+
 	//rename yaml to name version
 	yamlName := fmt.Sprintf("%s_v%s.yaml", snippetData.Name, snippetData.Version)
 	writeYaml(snippetData, yamlName)
@@ -64,27 +78,68 @@ func createYaml(snippetID string, db *sql.DB) (yamlFile string, err error) {
 func createZip(db *sql.DB) error {
 	// Get all data from the database and export a zip file
 	debug.Print("[*] Attempting creation of zip archive for the database.")
+	var idSlice []string
 
-	//Query all the id numbers
-
-	query := `
-    SELECT id FROM snippets
-    `
-	rows, err := db.Query(query)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "[!] Error querying ids: %w\n", err)
-		return err
-	}
-	defer rows.Close()
-
-	var idSlice []int
-	for rows.Next() {
-		var id int
-		if err := rows.Scan(&id); err != nil {
+	if len(IncludeTag) == 0 {
+		rows, err := db.Query("SELECT id FROM snippets")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[!] Error querying ids: %w\n", err)
 			return err
 		}
-		idSlice = append(idSlice, id)
+		defer rows.Close()
+
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err != nil {
+				return err
+			}
+			idSlice = append(idSlice, id)
+		}
+
+	} else {
+		for _, tag := range IncludeTag {
+			var tagID string
+			var snippetID string
+			db.QueryRow("SELECT id FROM tags WHERE tag = ?", tag).Scan(&tagID)
+			rows, err := db.Query("SELECT snipId FROM tagMap WHERE tagId = ?", tagID)
+			if err != nil {
+				return err
+			}
+			for rows.Next() {
+				if err := rows.Scan(&snippetID); err != nil {
+					log.Fatalf("Row scan failed: %v", err)
+				}
+				idSlice = append(idSlice, snippetID)
+			}
+
+		}
+
 	}
+
+	for _, tag := range ExcludeTag {
+		var tagID string
+		var snippetID string
+		db.QueryRow("SELECT id FROM tags WHERE tag = ?", tag).Scan(&tagID)
+		rows, err := db.Query("SELECT snipId FROM tagMap WHERE tagId = ?", tagID)
+		if err != nil {
+			return err
+		}
+		for rows.Next() {
+			if err := rows.Scan(&snippetID); err != nil {
+				log.Fatalf("Row scan failed: %v", err)
+			}
+			result := []string{}
+			for _, v := range idSlice {
+				if v != tagID {
+					result = append(result, v)
+				}
+			}
+			idSlice = result
+		}
+
+	}
+
+	//Query all the id numbers
 
 	if len(idSlice) == 0 {
 		fmt.Fprintf(os.Stdout, "[+] Database is empty\n")
@@ -94,7 +149,7 @@ func createZip(db *sql.DB) error {
 	//for each id number, create a yaml
 	var yamlFiles []string
 	for _, id := range idSlice {
-		yamlFile, err := createYaml(strconv.Itoa(id), db)
+		yamlFile, err := createYaml(id, db)
 		if err != nil {
 			log.Printf("[!] Failed to create yaml file ")
 			fmt.Println("%w", err)
@@ -104,7 +159,7 @@ func createZip(db *sql.DB) error {
 	}
 
 	//zip up all the yamls
-	err = zipYamls(yamlFiles)
+	err := zipYamls(yamlFiles)
 	if err != nil {
 		log.Printf("Failed to create zip file ")
 		fmt.Println("%w", err)
@@ -182,6 +237,9 @@ var (
 		Long: `Back up the snippets in your database or allow them to be transferred
 
 EXAMPLES
+
+ask create zip --include-tag linux --exclude-tag redleg
+	#Backup all snippets with the linux tag, but none that also include the redleg tag
 
 ask create zip --outfile 2025_07_26_ask.zip
 	#Backup all the ask data into the 2025_07_26_ask.zip file
@@ -267,26 +325,40 @@ It is also very helpful to provide lists of other snippets to do based on how th
 
 func createDbSchema(db *sql.DB) (err error) {
 	// Create the table schema in the database
-	var schema string
 	debug.Print("[*] Entered the createDbSchema function")
-	debug.Print("[*] Checking for the snippets table")
-	if ask_db.TableExists(db, "snippets") == false {
-		debug.Print("Creating snippets table in database")
-		if ask_db.Driver == "mysql" {
-			debug.Print("[!] Assuming mysql driver")
-			schema = `
-	CREATE TABLE snippets (
-		id INT(11) NOT NULL AUTO_INCREMENT,
-		name TEXT DEFAULT NULL,
-		description TEXT DEFAULT NULL,
-		variables TEXT DEFAULT NULL,
-		version TEXT DEFAULT NULL,
-		snippetText TEXT DEFAULT NULL,
-		PRIMARY KEY (id)
-	);`
-		} else {
-			debug.Print("[!] Assuming sqlite3 driver for snippets table creation")
-			schema = `
+	//var schema string
+
+	if ask_db.TableExists(db, "snippets") == true {
+		return nil
+	}
+
+	mysqlQueryMap := map[string]string{
+		"table": `
+		CREATE TABLE snippets (
+			id INT(11) NOT NULL AUTO_INCREMENT,
+			name TEXT DEFAULT NULL,
+			description TEXT DEFAULT NULL,
+			variables TEXT DEFAULT NULL,
+			version TEXT DEFAULT NULL,
+			snippetText TEXT DEFAULT NULL,
+			PRIMARY KEY (id)
+			);`,
+		"tagMap": `CREATE TABLE tagMap (
+				id INT(11) NOT NULL AUTO_INCREMENT,
+				tagId INT(11) DEFAULT NULL,
+				snipId INT(11) DEFAULT NULL,
+				PRIMARY KEY (id)
+			)`,
+		"tags": `
+			CREATE TABLE tags (
+				id INT(11) NOT NULL AUTO_INCREMENT,
+				tag TEXT DEFAULT NULL,
+				PRIMARY KEY (id)
+			);`,
+	}
+
+	sqlQueryMap := map[string]string{
+		"table": `
 			CREATE TABLE IF NOT EXISTS snippets (
 			    id INTEGER PRIMARY KEY AUTOINCREMENT,
 			    name TEXT,
@@ -294,65 +366,48 @@ func createDbSchema(db *sql.DB) (err error) {
 			    variables TEXT,
 			    version TEXT,
 			    snippetText TEXT
-			);`
-		}
-
-		_, err := db.Exec(schema)
-		if err != nil {
-			return fmt.Errorf("Failed to create schema: %v", err)
-		}
-
-		fmt.Println("[+] Created snippets table")
-
+			);`,
+		"tagMap": `
+			CREATE TABLE tagMap (
+			    id INTEGER PRIMARY KEY AUTOINCREMENT,
+			    tagId INTEGER,
+			    snipId INTEGER
+		);`,
+		"tags": `
+			CREATE TABLE tags (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				tag TEXT
+			);`,
 	}
 
-	/*
-			debug.Print("Checking for the snippets tagMap table")
-			if ask_db.TableExists(db, "tagMap") == false {
-				schema := `
-		CREATE TABLE tagMap (
-			id INT(11) NOT NULL AUTO_INCREMENT,
-			tagId INT(11) DEFAULT NULL,
-			snipId INT(11) DEFAULT NULL,
-			PRIMARY KEY (id)
-		);`
-
-				_, err = db.Exec(schema)
-				if err != nil {
-					log.Fatalf("Failed to create schema: %v", err)
-				}
-
-				fmt.Println("Created tagMap table")
+	//Loop through to create the tables
+	if ask_db.Driver == "mysql" {
+		for key, createStatement := range mysqlQueryMap {
+			_, err := db.Exec(createStatement)
+			if err != nil {
+				return fmt.Errorf("Failed to create %s table: %v", key, err)
 			}
+			debug.Print("[+] Created table: %s", key)
+		}
 
-			debug.Print("Checking for the snippets tags")
-			if ask_db.TableExists(db, "tags") == false {
-				schema := `
-		CREATE TABLE tags (
-			id INT(11) NOT NULL AUTO_INCREMENT,
-			tag TEXT DEFAULT NULL,
-			PRIMARY KEY (id)
-		);`
-
-				_, err = db.Exec(schema)
-				if err != nil {
-					log.Fatalf("Failed to create schema: %v", err)
-				}
-
-				fmt.Println("Created tags table")
-
-				//create tagMap table
+	} else {
+		for key, createStatement := range sqlQueryMap {
+			_, err := db.Exec(createStatement)
+			if err != nil {
+				return fmt.Errorf("Failed to create %s table: %v", key, err)
 			}
+			debug.Print("[+] Created table: %s", key)
+		}
 
-	*/
+	}
 	return nil
 }
 
 var (
 	databaseCmd = &cobra.Command{
-		Use:   "db_schema",
-		Short: "Create the ask database schema on the server.",
-		Aliases: []string{"db","schema"},
+		Use:     "db_schema",
+		Short:   "Create the ask database schema on the server.",
+		Aliases: []string{"db", "schema"},
 		Long: `This command will create the schemas to support ask.  Under the hood, it creates three tables:
 
 - snippets ( id,name, description, variables, version, snippetText)
@@ -424,6 +479,10 @@ func init() {
 	}
 	archiveCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.config/ask/config.yaml)")
 	archiveCmd.PersistentFlags().StringVarP(&ArchiveFile, "outfile", "o", "archive.zip", "Zip file to create from database")
+
+	archiveCmd.PersistentFlags().StringSliceVarP(&IncludeTag, "include-tag", "i", []string{}, "Tags for snippets to include for creation. (default is to include all tags)")
+	archiveCmd.PersistentFlags().StringSliceVarP(&ExcludeTag, "exclude-tag", "x", []string{}, "Tags for snippets to exclude for creation. (default is to exclude no tags)")
+
 	archiveCmd.PersistentPreRunE = func(_ *cobra.Command, _ []string) error {
 		// debug should be global, no?
 		debug.Enabled = debugFlag

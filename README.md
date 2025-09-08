@@ -85,7 +85,8 @@
 What is this? This project is an attempt to solve the following problems that people who conduct complex network operations might face:
 1. Broad toolsets that use a variety of hard-to-remember syntaxes.
 2. Implement version control on code snippets to keep track of incremental improvements
-3. Standardize code snippets and capture metadata about the snippets to try to dummy-proof them and allow others to adopt them
+3. Standardize code snippets and capture metadata about the snippets to try to dummy-proof them 
+4. Share code snippets with others that use a variety of workflows (VSCode, vim, straight bash, Obsidian)
 
 The philosophy behind the project is that perfection is unattainable but we can always strive for clear documentation and continuous improvement.
 
@@ -232,16 +233,18 @@ chmod +x ask
 - [x] Create a default zip archive with some basic snippets
 - [x] Create tutorial on how to use variable yamls to make rendering easier
 - [x] vscode snippet format for rendering
-- [ ] implement tagging system for searching
-    - [ ] tab completion for tags in TUI
+- [x] implement tagging system for searching
+    - [x] tab completion for tags in TUI
 - [x] interactive metasploit-like console for searching
-    - [x] Set flags for rendering, output file, clipboard
+    - [x] Set flags for rendering, output file
     - [ ] set global variables
 - [ ] fuzzy searching
 - [ ] implement heirarchy
     - [ ]	add suggestions from existing heirarchy in snippet forms.
     - [x]	in the console, allow use with tab completion of available snippets to discover more
 - [ ] Unit testing
+- [ ] Render output to system clipboard
+- [ ] Render to Templater-Obsidian format
 
 See the [open issues](https://github.com/CleverNamesTaken/Ask/issues) for a full list of proposed features (and known issues).
 
@@ -309,6 +312,7 @@ This tool was inspired by other great projects:
 - v0.3.0 : Ask console
 - v0.3.1 : console flags, tab completion
 - v0.3.2 : Added choices for default values in ultisnips and vscode rendering.  Also tab completion for default value and choices in console.
+- v0.4.0 : Improved vscode rendering.  Added tagging system.  Removed clipboard rendering (for now)
 
 
 

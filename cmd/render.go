@@ -20,7 +20,7 @@ import (
 
 	//"github.com/jedib0t/go-pretty/v6/text"
 
-	"golang.design/x/clipboard"
+	//"golang.design/x/clipboard"
 
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
@@ -75,6 +75,7 @@ func render(snippetID string, db *sql.DB) error {
 			field := huh.NewInput().
 				Title(variable).
 				Description(snippetStruct.Variables[variable].Description + "\nExample value: " + snippetStruct.Variables[variable].ExampleValue).
+				//It would be nice to be able to do something clever for multi-choice default values here, but I'm not sure what
 				Value(&snippetStruct.Variables[variable].DefaultValue)
 			varFields = append(varFields, field)
 		}
@@ -139,24 +140,24 @@ func render(snippetID string, db *sql.DB) error {
 
 	}
 
-	if Clipboard {
-		err := clipboard.Init()
-		if err != nil {
-			panic(err)
-		}
-		clipboard.Write(clipboard.FmtText, []byte(snippetStruct.SnippetText))
-		fmt.Fprintf(os.Stdout, "[+] Copied snippet to clipboard: %s\n", snippetStruct.Name)
-	} else {
+	//if Clipboard {
+	//err := clipboard.Init()
+	//if err != nil {
+	//panic(err)
+	//}
+	//clipboard.Write(clipboard.FmtText, []byte(snippetStruct.SnippetText))
+	//fmt.Fprintf(os.Stdout, "[+] Copied snippet to clipboard: %s\n", snippetStruct.Name)
+	//} else {
 
-		fmt.Fprintf(os.Stdout, "%s\n", snippetStruct.SnippetText)
-	}
+	fmt.Fprintf(os.Stdout, "%s\n", snippetStruct.SnippetText)
+	//}
 
 	return nil
 
 }
 
 // Clipboard is a flag variable
-var Clipboard bool
+//var Clipboard bool
 
 // VarSave is a flag variable
 var VarSave bool
@@ -317,22 +318,8 @@ func processVSCode(snippetID string, db *sql.DB) (processed bool, err error) {
 	}
 
 	var headerSection string //, variableSection, bodySection string
-	//snippetFileName := fmt.Sprintf("%s_v%s.json", snippetData.Name, snippetData.Version)
 
-	// Create the header/metadata section
-	// Figure out the format for VS code rendering
-
-	/*
-		"example": {
-		  "prefix": "trigger",
-		  "description": "example"
-		  "body": [
-		    "this is my snippet"
-		  ],
-		}
-	*/
-
-	headerSection = fmt.Sprintf("\n\"%s_v%s\": {\n\t \"prefix\": \"%s\",\n\t \"description\": \"%s\"\n\t \"body\": [\n", snippetData.Name, snippetData.Version, snippetData.Name, snippetData.Description)
+	headerSection = fmt.Sprintf("{\n\"%s_v%s\": {\n\t \"prefix\": \"%s\",\n\t \"description\": \"%s\",\n\t \"body\": [\n", snippetData.Name, snippetData.Version, snippetData.Name, snippetData.Description)
 
 	var bodyTable bytes.Buffer
 	tw := table.NewWriter()
@@ -361,11 +348,11 @@ func processVSCode(snippetID string, db *sql.DB) (processed bool, err error) {
 		for variable, variableInfo := range snippetData.Variables {
 			//The index for the variables is not set because maps are unordered.  If I want to have consistent orders for the variables, I may have to rethink my Variables struct.
 			variableKey = append(variableKey, variable)
-			if variableInfo.DefaultValue != "" && !strings.Contains(variableInfo.DefaultValue,"|") {
+			if variableInfo.DefaultValue != "" && !strings.Contains(variableInfo.DefaultValue, "|") {
 				//Need to fix the index numbers here
 				tw.AppendRow(table.Row{variable, "${" + strconv.Itoa(len(variableKey)*10) + ":" + variableInfo.DefaultValue + "}", variableInfo.ExampleValue, variableInfo.Description})
-			} else if strings.Contains(variableInfo.DefaultValue,"|") {
-				tw.AppendRow(table.Row{variable, "${" + strconv.Itoa(len(variableKey)*10) + "|" + strings.ReplaceAll(variableInfo.DefaultValue,"|",",") + "|}", variableInfo.ExampleValue, variableInfo.Description})
+			} else if strings.Contains(variableInfo.DefaultValue, "|") {
+				tw.AppendRow(table.Row{variable, "${" + strconv.Itoa(len(variableKey)*10) + "|" + strings.ReplaceAll(variableInfo.DefaultValue, "|", ",") + "|}", variableInfo.ExampleValue, variableInfo.Description})
 			} else {
 				//Need to fix the index numbers here
 				tw.AppendRow(table.Row{variable, "${" + strconv.Itoa(len(variableKey)*10) + "}", variableInfo.ExampleValue, variableInfo.Description})
@@ -402,9 +389,9 @@ func processVSCode(snippetID string, db *sql.DB) (processed bool, err error) {
 	}
 
 	processedBody = processedBody + "]\n"
-	fullText := headerSection + processedBody + "}"
+	fullText := headerSection + processedBody + "}\n}"
 
-	snippetFileName := fmt.Sprintf("%s_v%s.json", snippetData.Name, snippetData.Version)
+	snippetFileName := fmt.Sprintf("%s_v%s.code-snippets", snippetData.Name, snippetData.Version)
 	err = writeSnippet(fullText, snippetFileName)
 	if err != nil {
 		return false, err
@@ -465,9 +452,9 @@ func processUlti(snippetID string, db *sql.DB) (processed bool, err error) {
 			if variableInfo.DefaultValue != "" && !strings.Contains(variableInfo.DefaultValue, "|") {
 				//Need to fix the index numbers here
 				tw.AppendRow(table.Row{variable, "${" + strconv.Itoa(len(variableKey)*10) + ":" + variableInfo.DefaultValue + "}", variableInfo.ExampleValue, variableInfo.Description})
-			} else if strings.Contains(variableInfo.DefaultValue, "|" ) {
-				tw.AppendRow(table.Row{variable, "${" + strconv.Itoa(len(variableKey)*10) + "|" + strings.ReplaceAll(variableInfo.DefaultValue,"|",",") + "|}", variableInfo.ExampleValue, variableInfo.Description})
-			}else {
+			} else if strings.Contains(variableInfo.DefaultValue, "|") {
+				tw.AppendRow(table.Row{variable, "${" + strconv.Itoa(len(variableKey)*10) + "|" + strings.ReplaceAll(variableInfo.DefaultValue, "|", ",") + "|}", variableInfo.ExampleValue, variableInfo.Description})
+			} else {
 				//Need to fix the index numbers here
 				tw.AppendRow(table.Row{variable, "${" + strconv.Itoa(len(variableKey)*10) + "}", variableInfo.ExampleValue, variableInfo.Description})
 			}
@@ -657,7 +644,7 @@ var (
 )
 
 func init() {
-	renderCmd.Flags().BoolVarP(&Clipboard, "clipboard", "x", false, "Render to clipboard.")
+	//renderCmd.Flags().BoolVarP(&Clipboard, "clipboard", "x", false, "Render to clipboard.")
 	renderCmd.AddCommand(textConvertCmd)
 	renderCmd.PersistentFlags().StringVarP(&OutputDir, "outputdir", "o", "./snippets", "Where to output the files, reading from the flag first, then the config file.")
 	renderCmd.PersistentFlags().StringVarP(&LoadFile, "load", "l", "", "YAML file to load variables for rendering")

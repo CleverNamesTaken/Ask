@@ -9,84 +9,149 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
+	"strings"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/cobra"
 )
 
-func browse(searchTerm string, db *sql.DB) error {
-	debug.Print("[*] Starting consoleSearch function for %s", searchTerm)
+// SearchField is a flag variable
+var SearchField []string
 
-	var name, version, description, snippetID string
-	matchSnippets := make(map[string]structs.Result)
+func browse(searchTerm string, db *sql.DB, SearchField []string) error {
+	debug.Print("[*] Entered browse function.")
 
-	debug.Print("[*] Creating search query")
-
-	if searchTerm == "*" {
-		stmt, err := db.Prepare("SELECT id, name, version, description FROM snippets")
-		debug.Print("[*] Prepared search query")
-		if err != nil {
-			return err
-		}
-		rows, err := stmt.Query()
-		debug.Print("[*] Search query executed")
-		if err != nil {
-			debug.Print("[!] Query failed!")
-			return err
-		}
-
-		for rows.Next() {
-			debug.Print("[+] Iterating over the matching rows")
-			if err := rows.Scan(&snippetID, &name, &version, &description); err != nil {
-				log.Fatalf("Row scan failed: %v", err)
-			}
-			if snippetID != "" {
-				tempResultStruct := structs.Result{}
-				tempResultStruct.Name = name
-				tempResultStruct.Version = version
-				tempResultStruct.Description = description
-				matchSnippets[snippetID] = tempResultStruct
-			}
-		}
-
+	// validate search fields
+	if len(SearchField) == 0 {
+		SearchField = append(SearchField, "name")
 	} else {
-		stmt, err := db.Prepare("SELECT id, name, version, description FROM snippets WHERE name LIKE ?")
-		if err != nil {
-			return err
-		}
-		rows, err := stmt.Query("%" + searchTerm + "%")
-		if err != nil {
-			debug.Print("[!] Query failed!")
-			return err
-		}
-		for rows.Next() {
-			debug.Print("[+] Iterating over the matching rows")
-			if err := rows.Scan(&snippetID, &name, &version, &description); err != nil {
-				log.Fatalf("Row scan failed: %v", err)
-			}
-			if snippetID != "" {
-				tempResultStruct := structs.Result{}
-				tempResultStruct.Name = name
-				tempResultStruct.Version = version
-				tempResultStruct.Description = description
-				matchSnippets[snippetID] = tempResultStruct
+		for _, field := range SearchField {
+			if !slices.Contains([]string{"name", "tag", "desc", "raw"}, field) {
+
+				return fmt.Errorf("[!] Invalid search field found: %s\n[*]Valid search fields are: name, tag, desc, raw", field)
 			}
 		}
 	}
 
-	debug.Print("[+] Successfully created the search query")
-	debug.Print("[+] Query succeeded")
+	var name, version, description, snippetID string
+	var idSlice []string
+	//check search term
+	//if *, then grab everything
+
+	if searchTerm == "*" {
+		rows, err := db.Query("SELECT id FROM snippets")
+		if err != nil {
+			return err
+		}
+		for rows.Next() {
+			if err := rows.Scan(&snippetID); err != nil {
+				log.Fatalf("Row scan failed: %v", err)
+			}
+			idSlice = append(idSlice, snippetID)
+		}
+	} else {
+		//otherwise, check searchfield and create map for slices
+		//these searches are case sensitive right now
+
+		for _, field := range SearchField {
+			switch field {
+			case "name":
+
+				rows, err := db.Query("SELECT id FROM snippets WHERE name like ?", "%"+searchTerm+"%")
+				if err != nil {
+					return err
+				}
+				for rows.Next() {
+					if err := rows.Scan(&snippetID); err != nil {
+						log.Fatalf("Row scan failed: %v", err)
+					}
+					idSlice = append(idSlice, snippetID)
+				}
+
+			case "tag":
+
+				var tagID string
+				db.QueryRow("SELECT id FROM tags WHERE tag LIKE ?", "%"+searchTerm+"%").Scan(&tagID)
+				rows, err := db.Query("SELECT snipId FROM tagMap WHERE tagId = ?", tagID)
+				if err != nil {
+					return err
+				}
+				for rows.Next() {
+					if err := rows.Scan(&snippetID); err != nil {
+						log.Fatalf("Row scan failed: %v", err)
+					}
+					idSlice = append(idSlice, snippetID)
+				}
+
+			case "desc":
+
+				rows, err := db.Query("SELECT id FROM snippets WHERE description LIKE ?", "%"+searchTerm+"%")
+				if err != nil {
+					return err
+				}
+				for rows.Next() {
+					if err := rows.Scan(&snippetID); err != nil {
+						log.Fatalf("Row scan failed: %v", err)
+					}
+					idSlice = append(idSlice, snippetID)
+				}
+
+			case "raw":
+
+				rows, err := db.Query("SELECT id FROM snippets WHERE snippetText LIKE ?", "%"+searchTerm+"%")
+				if err != nil {
+					return err
+				}
+				for rows.Next() {
+					if err := rows.Scan(&snippetID); err != nil {
+						log.Fatalf("Row scan failed: %v", err)
+					}
+					idSlice = append(idSlice, snippetID)
+				}
+
+			}
+
+		}
+	}
+
+	//loop through slice to get results
+	matchSnippets := make(map[string]structs.Result)
+	for _, snippetID = range idSlice {
+		err := db.QueryRow("SELECT name,version,description FROM snippets WHERE id = ?", snippetID).Scan(&name, &version, &description)
+		if err != nil {
+			return err
+		}
+		tempResultStruct := structs.Result{}
+		tempResultStruct.Name = name
+		tempResultStruct.Version = version
+		tempResultStruct.Description = description
+		matchSnippets[snippetID] = tempResultStruct
+	}
 
 	//Prepare table
 	var resultsTable bytes.Buffer
 	tw := table.NewWriter()
 	tw.SetOutputMirror(&resultsTable)
-	tw.AppendHeader(table.Row{"ID", "Name", "Version", "Description"})
+	tw.AppendHeader(table.Row{"ID", "Name", "Version", "Description", "Tags"})
 	// Merge everything into headerSection
 
 	for id, match := range matchSnippets {
+
+		//grab all the tags based on the id
+
+		existingTagMap, err := getTags(id, db)
+		if err != nil {
+			log.Fatal(err)
+		}
+		var Tags []string
+		for tag, _ := range existingTagMap {
+			Tags = append(Tags, tag)
+		}
+		tagString := strings.Join(Tags, ", ")
+
 		//Create the table here too
-		tw.AppendRow(table.Row{id, match.Name, match.Version, match.Description})
+		tw.AppendRow(table.Row{id, match.Name, match.Version, match.Description, tagString})
 	}
 	tw.SetStyle(table.StyleRounded) // Optional: You can use StyleLight, StyleBold, etc.
 	tw.Render()
@@ -99,7 +164,7 @@ var (
 		Use:     "browse",
 		Short:   "Browse snippets in the database. Aliased to 'ls' ",
 		Aliases: []string{"ls"},
-		Long: `Take a quick look at the snippet names, versions and descriptions for the database
+		Long: `Take a quick look at the snippet names, versions, tags and descriptions for the database.  The --field flag can be used to designate which field to search among the choices "name","tag" ,"raw" or "desc".  Searches are case sensitive and will search the snippet name, tags, raw snippet text and snippet description, respectively.
 
 EXAMPLES
 
@@ -107,6 +172,10 @@ ask browse
 	#Quickly examine everything
 ask browse example
 	#Look for snippets that have "example" in the name
+ask ls -f tag web
+	#Look for snippets that have a web tag
+ask ls -f tag -f raw ssh
+	#Look for snippets that have ssh in the tag name or in the raw snippet text.
 `,
 		//Args:  cobra.MinimumNArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
@@ -115,9 +184,9 @@ ask browse example
 				searchTerm = "*"
 			} else {
 				// Need to fix this search string to allow any number of arguments
-				searchTerm = args[0]
+				searchTerm = strings.Join(args, " ")
 			}
-			err := browse(searchTerm, ask_db.DB)
+			err := browse(searchTerm, ask_db.DB, SearchField)
 			if err != nil {
 				fmt.Fprintf(os.Stdout, "[!] Ran into error executing browse function: %w", err)
 				return
@@ -132,3 +201,8 @@ ask browse example
 		},
 	}
 )
+
+func init() {
+	browseCmd.PersistentFlags().StringSliceVarP(&SearchField, "field", "f", []string{}, "Which field(s) among name, tag, description, and raw for a case-sensitive search.  Use multiple flags to search multiple fields. (Default selection is name.)")
+
+}

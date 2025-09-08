@@ -1,8 +1,13 @@
 //EASY
-
+// create zip by tags
+// add next snippet field
 // defer close for everything that does db.Query
 //Check for graceful error handling everywhere
+// where do we _ and do we need to
+// name of archive.zip
+// obsidian templates
 // VarSave output directory
+// new field for next snippets
 
 // MEDIUM
 

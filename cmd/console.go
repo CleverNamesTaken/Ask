@@ -13,7 +13,7 @@ import (
 	"slices"
 
 	"github.com/spf13/pflag"
-	"golang.design/x/clipboard"
+	//"golang.design/x/clipboard"
 
 	"github.com/abiosoft/ishell/v2"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -81,7 +81,7 @@ func askConsole() {
 				// Need to fix this search string to allow any number of arguments
 				searchTerm = c.Args[0]
 			}
-			err := browse(searchTerm, ask_db.DB)
+			err := browse(searchTerm, ask_db.DB, SearchField)
 			if err != nil {
 				fmt.Fprintf(os.Stdout, "[!] Ran into error executing browse function: %w", err)
 			}
@@ -131,8 +131,9 @@ func setVariables(variables map[string]*structs.Variable) (variableMap map[strin
 func useConsole(snippetString string, shell *ishell.Shell) error {
 	db := ask_db.DB
 	snippetID, snippetName, _ := getSnippetID(snippetString, db)
+	snippetVersion, _ := getVersion(snippetID, db)
 	sub := ishell.New()
-	promptString := fmt.Sprintf("%s >", snippetName)
+	promptString := fmt.Sprintf("%s_v%s >", snippetName, snippetVersion)
 	sub.SetPrompt(promptString)
 
 	//Grab all the snippet data
@@ -151,8 +152,9 @@ func useConsole(snippetString string, shell *ishell.Shell) error {
 	})
 
 	sub.AddCmd(&ishell.Cmd{
-		Name: "show",
-		Help: "Show information about a snippet",
+		Name:    "show",
+		Help:    "Show information about a snippet",
+		Aliases: []string{"info"},
 		Func: func(sc *ishell.Context) {
 
 			var headerTable bytes.Buffer
@@ -168,19 +170,23 @@ func useConsole(snippetString string, shell *ishell.Shell) error {
 
 			//show variables
 
-			var variableTable bytes.Buffer
-			tw = table.NewWriter()
-			tw.SetOutputMirror(&variableTable)
-			tw.AppendHeader(table.Row{"Variable Name", "Value", "Example Value", "Description"})
+			if len(snippetData.Variables) > 0 {
+				var variableTable bytes.Buffer
+				tw = table.NewWriter()
+				tw.SetOutputMirror(&variableTable)
+				tw.AppendHeader(table.Row{"Variable Name", "Value", "Example Value", "Description"})
 
-			var variableKey []string
-			for variable, variableInfo := range snippetData.Variables {
-				variableKey = append(variableKey, variable)
-				tw.AppendRow(table.Row{variable, variableMap[variable], variableInfo.ExampleValue, variableInfo.Description})
+				var variableKey []string
+				for variable, variableInfo := range snippetData.Variables {
+					variableKey = append(variableKey, variable)
+					tw.AppendRow(table.Row{variable, variableMap[variable], variableInfo.ExampleValue, variableInfo.Description})
+				}
+				tw.SetStyle(table.StyleRounded)
+				tw.Render()
+				sc.Print(variableTable.String())
+			} else {
+				sc.Print("\n\nNo variables for this snippet.\n\n")
 			}
-			tw.SetStyle(table.StyleRounded)
-			tw.Render()
-			sc.Print(variableTable.String())
 
 		},
 	})
@@ -195,14 +201,14 @@ func useConsole(snippetString string, shell *ishell.Shell) error {
 			if len(args) == 0 {
 				return variables
 			} else if len(args) == 1 {
-				defaultValue := snippetData.Variables[args[0]].DefaultValue 
-				if defaultValue != "" && !strings.Contains(defaultValue,"|") {
+				defaultValue := snippetData.Variables[args[0]].DefaultValue
+				if defaultValue != "" && !strings.Contains(defaultValue, "|") {
 					return []string{defaultValue}
 				} else if defaultValue != "" {
-					return strings.Split(defaultValue,"|")
+					return strings.Split(defaultValue, "|")
 				}
 			}
-				return nil
+			return nil
 		},
 
 		Func: func(sc *ishell.Context) {
@@ -226,21 +232,22 @@ func useConsole(snippetString string, shell *ishell.Shell) error {
 
 	sub.AddCmd(&ishell.Cmd{
 		Name: "render",
-		Help: `Render the snippet with the variables replaced.  This command currently supports three flags:
+		Help: `Render the snippet with the variables replaced.  This command currently supports two flags:
 
 		--output, -o,		Save the rendered snippet to the designated file.
-		--clip, -x,		Copy the rendered snippet to the clipboard.
-		--quiet,-q,		Do not render the output to stdout.  If --clip or --output are not used, then there is no point in using this flag.
+		--quiet,-q,		Do not render the output to stdout.  If --output is not used, then there is no point in using this flag.
 
 		Aliases: run, exploit, r
 
 		`,
+
+		//--clip, -x,		Copy the rendered snippet to the clipboard.
 		Aliases: []string{"run", "exploit", "r"},
 		Func: func(sc *ishell.Context) {
 
 			fs := pflag.NewFlagSet("output", pflag.ContinueOnError)
 			output := fs.StringP("output", "o", "/dev/null", "File to save output of rendering.")
-			clip := fs.BoolP("clip", "x", false, "Copy to clipboard.")
+			//clip := fs.BoolP("clip", "x", false, "Copy to clipboard.")
 			quiet := fs.BoolP("quiet", "q", false, "Do not print to stdout.  Without --output or --clip, using this flag would make rendering useless.")
 			fs.Parse(sc.Args)
 
@@ -270,14 +277,14 @@ func useConsole(snippetString string, shell *ishell.Shell) error {
 				}
 
 			}
-			if *clip {
-				err := clipboard.Init()
-				if err != nil {
-					panic(err)
-				}
-				clipboard.Write(clipboard.FmtText, []byte(snippetText))
+			//			if *clip {
+			//err := clipboard.Init()
+			//if err != nil {
+			//panic(err)
+			//}
+			//clipboard.Write(clipboard.FmtText, []byte(snippetText))
 
-			}
+			//}
 			if !*quiet {
 				sc.Printf(snippetText + "\n")
 			}
@@ -301,7 +308,7 @@ func useConsole(snippetString string, shell *ishell.Shell) error {
 				// Need to fix this search string to allow any number of arguments
 				searchTerm = sc.Args[0]
 			}
-			err := browse(searchTerm, ask_db.DB)
+			err := browse(searchTerm, ask_db.DB, SearchField)
 			if err != nil {
 				fmt.Fprintf(os.Stdout, "[!] Ran into error executing browse function: %w", err)
 			}
@@ -342,8 +349,8 @@ func useConsole(snippetString string, shell *ishell.Shell) error {
 		Name: "exit",
 		Help: "Exit the ask console",
 		Func: func(sc *ishell.Context) {
-			sub.Close()
 			shell.Close()
+			sub.Close()
 		},
 	})
 

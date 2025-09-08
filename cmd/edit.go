@@ -29,7 +29,7 @@ import (
 
 func edit(snippetID string, db *sql.DB) {
 	//edit a snippet based on a snippet id
-	debug.Print("[*] Starting to edit snippet: %s", snippetID)
+	debug.Print("[*] Starting to edit snippet id #: %s", snippetID)
 
 	var snippetData structs.Snippet
 	var yamlData structs.Snippet
@@ -40,6 +40,7 @@ func edit(snippetID string, db *sql.DB) {
 	if err != nil {
 		panic(err)
 	}
+	//should use query row because the id is unique
 	rows, err := stmt.Query(snippetID)
 	if err != nil {
 		panic(err)
@@ -63,6 +64,15 @@ func edit(snippetID string, db *sql.DB) {
 	snippetTextHandle, err := ioutil.TempFile("", "temp-*.txt")
 	snippetFile := snippetTextHandle.Name()
 	snippetTextHandle.Close()
+
+	//prepare tags for the form too
+	existingTagMap, err := getTags(snippetID, db)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for tag, _ := range existingTagMap {
+		snippetData.Tags = append(snippetData.Tags, tag)
+	}
 
 	yamlByteString, err := yaml.Marshal(snippetData)
 	yamlString := string(yamlByteString)
@@ -240,91 +250,6 @@ func customVersionForm(snippetName string, db *sql.DB) (newVersion string, err e
 	debug.Print("[*] Custom version : %s", newVersion)
 	return newVersion, nil
 }
-
-/*
-func tagTest() (err error) {
-	var tag string
-	var tagString string
-
-	//go doc "github.com/charmbracelet/huh".Select.OptionsFunc
-
-	var tags []string
-	form := huh.NewForm(
-		//https://github.com/charmbracelet/huh/issues/500
-		huh.NewGroup(
-			//Need to set the position at the top for each section
-			huh.NewSelect[string]().
-				Title("Add tags").
-				//Could see how this could be massive for the list
-				OptionsFunc(func() []huh.Option[string] {
-					options := make([]huh.Option[string], 3)
-					options[0] = huh.NewOption("COMPLETE", "COMPLETE")
-					options[1] = huh.NewOption("Custom", "Custom")
-
-					//This should be a dynamic list based on what is in the database
-					return options
-
-				}, &tagString).
-				Value(&tag).
-				Validate(func(tag string) error {
-					//Need to make sure we do not duplicate tags
-					//should be case
-					if tag == "COMPLETE" {
-						return nil
-					} else if tag == "Custom" {
-						errorMessage := "Custom tag selection identified.  You will be prompted shortly for the tags"
-						tags = append(tags, tag)
-						return errors.New(errorMessage)
-
-					}
-					//if custom, handle it
-					errorMessage := "Adding tag: " + tag
-					tags = append(tags, tag)
-					tagString = strings.Join(tags, "|")
-					return errors.New(errorMessage)
-
-				}),
-			huh.NewSelect[string]().
-				Title("Remove tags").
-				OptionsFunc(func() []huh.Option[string] {
-					removeOptions := make([]huh.Option[string], 1+len(tags))
-					removeOptions[0] = huh.NewOption("None", "None")
-					for i, tag := range tags {
-
-						removeOptions[i+1] = huh.NewOption(tag, tag)
-					}
-					return removeOptions
-
-				}, &tagString).
-				Value(&tag).
-				Validate(func(tag string) error {
-					if tag == "None" {
-						return nil
-					} else {
-						errorMessage := "Removing tag: " + tag
-						for i := range tags {
-							if tags[i] == tag {
-								tags = append(tags[:i], tags[i+1:]...)
-								break
-							}
-						}
-						tagString = strings.Join(tags, "|")
-
-						return errors.New(errorMessage)
-					}
-				}),
-		).WithHeight(10),
-	)
-
-	err = form.Run()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(strings.Join(tags, "|"))
-
-	return nil
-}
-*/
 
 var (
 	editCmd = &cobra.Command{

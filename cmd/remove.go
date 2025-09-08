@@ -1,11 +1,11 @@
 package cmd
 
 import (
-	"database/sql"
-	"fmt"
 	"ask/ask_db"
 	"ask/internal/debug"
 	structs "ask/internal/model"
+	"database/sql"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -50,7 +50,7 @@ func getSnippetID(snippetString string, db *sql.DB) (snippetID string, snippetNa
 	}
 
 	// Otherwise, treat as name and look up the latest version's ID
-	query := `SELECT id FROM snippets WHERE name = ? ORDER BY version DESC LIMIT 1`
+	query := `SELECT id FROM snippets WHERE name = ? ORDER BY id DESC LIMIT 1`
 	row := db.QueryRow(query, snippetString)
 
 	// Scan the result into snippetID
@@ -95,26 +95,89 @@ func isLatestSnippet(db *sql.DB, snippetID string, snippetName string) bool {
 
 }
 
+func getVersion(snippetID string, db *sql.DB) (snippetVersion string, err error) {
+	//Given a snippet ID, get the associated version number
+	query := `SELECT version FROM snippets WHERE id = ?`
+	row := db.QueryRow(query, snippetID)
+	err = row.Scan(&snippetVersion)
+	return snippetVersion, err
+}
+
+func getTags(snippetID string, db *sql.DB) (tagMap map[string]string, err error) {
+	//Given a snippet ID, get the associated tag name and ids
+	tagMap = make(map[string]string)
+
+	query := `SELECT tagId FROM tagMap WHERE snipId = ?`
+	rows, err := db.Query(query, snippetID)
+
+	if err != nil {
+		return tagMap, err
+	}
+
+	var tagId string
+	var tag string
+
+	for rows.Next() {
+		if err := rows.Scan(&tagId); err != nil {
+			return tagMap, err
+		}
+		db.QueryRow("SELECT tag FROM tags WHERE id = ?", tagId).Scan(&tag)
+		debug.Print("[+] Found tag: %s", tag)
+		tagMap[tag] = tagId
+	}
+
+	return tagMap, nil
+}
+
 func remove(snippetID string, snippetName string, db *sql.DB) (err error) {
 	debug.Print("[*] Trying to remove %s , number %s\n", snippetName, snippetID)
 
-	if isLatestSnippet(db, snippetID, snippetName) == true && ForceRemove == false {
-		prompt := ""
-		fmt.Printf("[!] This is the latest snippet version. Are you sure you want to remove it? (yes/no): ")
-		fmt.Scanln(&prompt)
-		if strings.ToLower(prompt) != "yes" {
+	if isLatestSnippet(db, snippetID, snippetName) && !ForceRemove {
+		fmt.Print("[!] This is the latest snippet version. Are you sure you want to remove it? (y/yes to confirm): ")
+		var prompt string
+		if _, err := fmt.Scanln(&prompt); err != nil || (strings.ToLower(prompt) != "y" && strings.ToLower(prompt) != "yes") {
+			fmt.Fprintf(os.Stdout, "[!] Removal cancelled")
 			return nil
 		}
 	}
+
+	snippetVersion, err := getVersion(snippetID, db)
+	if err != nil {
+		return err
+	}
+
+	snippetTags, err := getTags(snippetID, db)
 
 	_, err = db.Exec("DELETE FROM snippets WHERE id = ?", snippetID)
 	if err != nil {
 		fmt.Fprintf(os.Stdout, "[!] Failed to remove snippet.\n")
 		return err
 	}
-	fmt.Fprintf(os.Stdout, "[+] Snippet removed: %s\n", snippetID)
-	return nil
 
+	_, err = db.Exec("DELETE FROM tagMap WHERE snipId = ?", snippetID)
+	if err != nil {
+		fmt.Fprintf(os.Stdout, "[!] Failed to remove tags for snippet.\n")
+		return err
+	}
+
+	fmt.Fprintf(os.Stdout, "[+] Snippet removed: %s_v%s\n", snippetName, snippetVersion)
+
+	//check if any other snippets have the tags removed.  If not, then remove the entry from the tags table
+	var exists bool
+	for _, tagId := range snippetTags {
+		query := `SELECT EXISTS(SELECT 1 FROM tagMap WHERE tagId = ?)`
+		db.QueryRow(query, tagId).Scan(&exists)
+		if !exists {
+			debug.Print("[!] Removed tagId: %s", tagId)
+			_, err = db.Exec("DELETE FROM tags WHERE id = ?", tagId)
+			if err != nil {
+				return err
+			}
+
+		}
+
+	}
+	return nil
 }
 
 var (

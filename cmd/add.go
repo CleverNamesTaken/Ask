@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
+	"slices"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
@@ -59,6 +60,7 @@ func quickSnippet(db *sql.DB) error {
 	}
 	// add it to the new struct
 	snippetStruct.Variables = Variables
+
 	snippetStruct = snippetWizard(snippetStruct, db)
 
 	//this is copied code -- clean it up
@@ -161,6 +163,7 @@ func lintPass(rawText string, yamlData string, snippetFile string, yamlFile stri
 	// variables in the metadata file and the snippet match up
 	// the metadata file has all the necessary fields
 	// the version numbers are ok
+	// check that the tags look good
 	var yamlStruct structs.Snippet
 	yaml.Unmarshal([]byte(yamlData), &yamlStruct)
 
@@ -211,8 +214,6 @@ func lintPass(rawText string, yamlData string, snippetFile string, yamlFile stri
 	// If fail, open them both up
 	if len(missingInText) != 0 || len(missingInYaml) != 0 || !updatePossible {
 		fmt.Fprintf(os.Stdout, "[!] Linting failed.\n")
-		// send to lint fixer
-
 		SnippetText, yamlString := editForm(yamlStruct, snippetFile, SnippetVersion, db)
 		var snippetData structs.Snippet
 		yaml.Unmarshal([]byte(yamlString), &snippetData)
@@ -238,33 +239,35 @@ func getLatestVersion(snippetName string, db *sql.DB) (latestVersion structs.Ver
 		return structs.Version{Major: 0, Minor: 1, Patch: 0}, nil
 	}
 
-	query := `SELECT version FROM snippets WHERE name = ? ORDER BY version DESC LIMIT 1`
-	row := db.QueryRow(query, snippetName)
+	//	query := `SELECT version FROM snippets WHERE name = ? ORDER BY id DESC LIMIT 1`
+	query := `SELECT version FROM snippets WHERE name = ? `
+	rows, _ := db.Query(query, snippetName)
 
 	var versionString string
-	if err := row.Scan(&versionString); err != nil {
-		return structs.Version{}, err
+	maxVersion := structs.Version{Major: 0, Minor: 0, Patch: 0}
+
+	for rows.Next() {
+		rows.Scan(&versionString)
+		parts := strings.Split(versionString, ".")
+		major, _ := strconv.Atoi(parts[0])
+		minor, _ := strconv.Atoi(parts[1])
+		patch, err := strconv.Atoi(parts[2])
+		if err != nil {
+			patch = 0
+		}
+		if major > maxVersion.Major {
+			maxVersion = structs.Version{Major: major, Minor: minor, Patch: patch}
+		}
+		if major == maxVersion.Major && minor > maxVersion.Minor {
+			maxVersion = structs.Version{Major: major, Minor: minor, Patch: patch}
+		}
+		if major == maxVersion.Major && minor == maxVersion.Minor && patch > maxVersion.Patch {
+			maxVersion = structs.Version{Major: major, Minor: minor, Patch: patch}
+		}
+
 	}
 
-	parts := strings.Split(versionString, ".")
-	if len(parts) != 3 {
-		return structs.Version{}, fmt.Errorf("invalid version format: %s", versionString)
-	}
-
-	major, err := strconv.Atoi(parts[0])
-	if err != nil {
-		return structs.Version{}, err
-	}
-	minor, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return structs.Version{}, err
-	}
-	patch, err := strconv.Atoi(parts[2])
-	if err != nil {
-		return structs.Version{}, err
-	}
-
-	return structs.Version{Major: major, Minor: minor, Patch: patch}, nil
+	return maxVersion, nil
 }
 
 func versionBump(version string, updateType string) (newVersion string, err error) {
@@ -319,7 +322,6 @@ func updateDatabase(yamlData structs.Snippet, db *sql.DB) (err error) {
 	variables, _ := json.Marshal(yamlData.Variables)
 
 	// read snippet text
-
 	if yamlData.SnippetText == "" {
 		file, err := os.Open(yamlData.SnippetFile)
 		if err != nil {
@@ -331,14 +333,116 @@ func updateDatabase(yamlData structs.Snippet, db *sql.DB) (err error) {
 		yamlData.SnippetText = string(byteValue)
 	}
 
-	_, err = stmt.Exec(yamlData.Name, yamlData.Description, variables, yamlData.Version, yamlData.SnippetText)
+	result, err := stmt.Exec(yamlData.Name, yamlData.Description, variables, yamlData.Version, yamlData.SnippetText)
 	if err != nil {
 		return err
 	}
 
-	// TODO update tags
+	snippetId, _ := result.LastInsertId()
+	//add tags
+	if addTags(snippetId, yamlData.Tags) != nil {
+		return err
+	}
 
 	return nil
+}
+
+func addTags(snippetId int64, tags []string) (err error) {
+	//Add tags to the database
+	debug.Print("[*] Adding tags for snippet")
+
+	existingTagsMap, err := allTags()
+	if err != nil {
+		return err
+	}
+
+	var existingTags []string
+	for tag, _ := range existingTagsMap {
+		existingTags = append(existingTags, tag)
+	}
+
+	//first see if all the tags exist
+	for _, tag := range tags {
+		found := slices.Contains(existingTags, tag)
+		debug.Print("[*] Found : %s", found)
+		if !found {
+			// add new tag
+			tagIdString, err := newTag(tag)
+			if err != nil {
+				return err
+			}
+			err = addTagMap(tagIdString, snippetId)
+			if err != nil {
+				return err
+			}
+
+		} else {
+			debug.Print("tag exists %s", tag)
+			//broken - should be the reverse
+			tagId := existingTagsMap[tag]
+			err = addTagMap(tagId, snippetId)
+			if err != nil {
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func addTagMap(tagId string, snippetId int64) (err error) {
+	debug.Print("[*] Mapping snippet %s and tag ids %s", snippetId, tagId)
+	snippet := strconv.FormatInt(snippetId, 10)
+	db := ask_db.DB
+	stmt, err := db.Prepare("INSERT INTO tagMap (tagId,snipId) VALUES (?,?)")
+	_, err = stmt.Exec(tagId, snippet)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func newTag(tag string) (tagId string, err error) {
+	debug.Print("Attempting to add tag %s", tag)
+
+	db := ask_db.DB
+	stmt, err := db.Prepare("INSERT INTO tags (tag) VALUES (?)")
+	result, err := stmt.Exec(tag)
+	if err != nil {
+		return tagId, err
+	}
+
+	tagId64, _ := result.LastInsertId()
+	debug.Print("last insert id: %s", tagId64)
+
+	tagId = strconv.FormatInt(tagId64, 10)
+	debug.Print("added tag %s %s", tag, tagId)
+
+	return tagId, nil
+}
+func allTags() (tags map[string]string, err error) {
+	debug.Print("[*] Gathering all tags in database")
+	//Create a map for all existing tags
+
+	db := ask_db.DB
+	var tag string
+
+	rows, err := db.Query("SELECT id, tag FROM tags")
+	if err != nil {
+		return tags, err
+	}
+
+	var id string
+	tags = make(map[string]string)
+	for rows.Next() {
+		err := rows.Scan(&id, &tag)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		tags[tag] = id
+	}
+	return tags, nil
 }
 
 func updatingVersion(version string, latestVersion structs.Version) (updatePossible bool, err error) {
@@ -415,14 +519,12 @@ func ReadYAML[T any](file string) (T, error) {
 }
 
 func snippetWizard(snippetStruct structs.Snippet, _ *sql.DB) (SnippetStruct structs.Snippet) {
-	//  Find all the existing tags
-	// var options []huh.Option[string]
-	// existingTags, err := getTags(db)
-	// for _, tag := range existingTags {
-	// newOptions := huh.NewOption(tag, tag)
-	// options = append(options, newOptions)
-	// }
-	newTagString := ""
+
+	var tag string
+	var removeTag string
+	var tagString string
+	tags := snippetStruct.Tags
+
 	//  Get the global fields ready.  Global meaning we will definitely run this, whether or not we have any variable info to fill out
 	var globalFields []huh.Field
 	snippetNameField := huh.NewInput().
@@ -460,24 +562,81 @@ func snippetWizard(snippetStruct structs.Snippet, _ *sql.DB) (SnippetStruct stru
 		},
 		)
 
-	//  Tags make the form kind of crazy looking. I don't love that.  Maybe something from bubble tea instead.
-	//  also could add optional "do you want to add tags?"
-	// snippetTagField := huh.NewMultiSelect[string]().
-	// Title("Tags").
-	// Description("Select any existing tags you want associated with the snippet.\nUse / to search and <SPACE> to select.").
-	// Options(options...).
-	// Value(&snippetStruct.Tags)
-	/*
-		snippetNewTagsField := huh.NewInput().
-			Title("New tags").
-			Description("Add any new tags you want added to the database.  Comma delimit for multiple tags.").
-			Value(&newTagString)
-	*/
+	snippetTagField := huh.NewInput().
+		Value(&tag).
+		Title("Add tags").
+		Description("Enter a blank when complete").
+		SuggestionsFunc(func() []string {
+			// create a slice with all the tags in the database
+			existingTagsMap, _ := allTags()
+			var existingTags []string
+			for tag, _ := range existingTagsMap {
+				existingTags = append(existingTags, tag)
+			}
+			return existingTags
+		}, &tag).
+		Validate(func(tag string) error {
+			//Need to make sure we do not duplicate tags
+			if tag == "" {
+				return nil
+			}
+			found := slices.Contains(tags, tag)
+			if found {
+				errorMessage := "Tag already added: " + tag
+				return errors.New(errorMessage)
+			}
+			if !regexp.MustCompile(`^[a-zA-Z0-9_.]*$`).MatchString(tag) {
+				return errors.New("Tags can only contain alphanumeric characters, periods or underscore")
+			}
+			errorMessage := "Adding tag: " + tag
+			tags = append(tags, tag)
+			tagString = strings.Join(tags, "|")
+
+			//This does not reset the value, but I would like to
+			return errors.New(errorMessage)
+
+		},
+		)
+	//maybe use a note to display tags
+
+	snippetTagRemoval := huh.NewSelect[string]().
+		Title("Remove tags").
+		Description("Select 'Done' when complete.").
+		OptionsFunc(func() []huh.Option[string] {
+			removeOptions := make([]huh.Option[string], 1+len(tags))
+			removeOptions[0] = huh.NewOption("Done", "Done")
+			if len(tags) > 0 {
+				for i, tag := range tags {
+					removeOptions[i+1] = huh.NewOption(tag, tag)
+				}
+			}
+
+			return removeOptions
+
+		}, &tagString).
+		Value(&removeTag).
+		Validate(func(removeTag string) error {
+			if removeTag == "Done" {
+				return nil
+			} else {
+				errorMessage := "Removing tag: " + removeTag
+				for i := range tags {
+					if tags[i] == removeTag {
+						tags = append(tags[:i], tags[i+1:]...)
+						break
+					}
+				}
+				tagString = strings.Join(tags, "|")
+
+				return errors.New(errorMessage)
+			}
+		},
+		)
 
 	globalFields = append(globalFields, snippetNameField)
 	globalFields = append(globalFields, snippetDescField)
-	// globalFields = append(globalFields, snippetTagField)
-	//globalFields = append(globalFields, snippetNewTagsField)
+	globalFields = append(globalFields, snippetTagField)
+	globalFields = append(globalFields, snippetTagRemoval)
 
 	//  Loop through the variables (if we have them) and build the form for them
 	var varFields []huh.Field
@@ -534,12 +693,7 @@ func snippetWizard(snippetStruct structs.Snippet, _ *sql.DB) (SnippetStruct stru
 		log.Fatal(err)
 	}
 	//  Add new tags
-	if len(snippetStruct.Tags) == 0 {
-		newTags := strings.Split(newTagString, ",")
-		for _, tag := range newTags {
-			snippetStruct.Tags = append(snippetStruct.Tags, tag)
-		}
-	}
+	snippetStruct.Tags = tags
 
 	return snippetStruct
 }
@@ -726,7 +880,6 @@ func ingestYaml(snippetFile string, db *sql.DB) error {
 }
 
 func ingestText(snippetFile string, db *sql.DB) error {
-	//If it is not a yaml file, then
 
 	var snippetName string
 	snippetName = snippetFileToName(snippetFile)
