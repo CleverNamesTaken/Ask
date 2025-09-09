@@ -174,7 +174,7 @@ func browse(searchTerm string, db *sql.DB, SearchField []string) error {
 	tw.SetOutputMirror(&resultsTable)
 
 	if !SearchAll {
-		tw.AppendHeader(table.Row{"ID", "Name", "Version", "Tags"})
+		tw.AppendHeader(table.Row{"ID", "Name", "Description", "Tags"})
 	} else {
 		tw.AppendHeader(table.Row{"ID", "Name", "Version", "Description", "Tags"})
 	}
