@@ -365,8 +365,6 @@ func processVSCode(snippetID string, db *sql.DB) (processed bool, err error) {
 	}
 
 	//make variable substitutions
-	//Do the ultisnips escapes
-	snippetData.SnippetText = strings.ReplaceAll(snippetData.SnippetText, "`", "\\`")
 	snippetData.SnippetText = strings.ReplaceAll(snippetData.SnippetText, "$", "\\$")
 
 	//Replace the variables

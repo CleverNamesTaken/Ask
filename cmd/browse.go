@@ -19,6 +19,9 @@ import (
 // SearchField is a flag variable
 var SearchField []string
 
+// SearchAll is a flag variable
+var SearchAll bool
+
 func browse(searchTerm string, db *sql.DB, SearchField []string) error {
 	debug.Print("[*] Entered browse function.")
 
@@ -27,7 +30,7 @@ func browse(searchTerm string, db *sql.DB, SearchField []string) error {
 		SearchField = append(SearchField, "name")
 	} else {
 		for _, field := range SearchField {
-			if !slices.Contains([]string{"name", "tag", "desc", "raw"}, field) {
+			if !slices.Contains([]string{"name", "tag", "desc", "raw", "tags"}, field) {
 
 				return fmt.Errorf("[!] Invalid search field found: %s\n[*]Valid search fields are: name, tag, desc, raw", field)
 			}
@@ -69,7 +72,23 @@ func browse(searchTerm string, db *sql.DB, SearchField []string) error {
 					idSlice = append(idSlice, snippetID)
 				}
 
+				//probably a better way to simpify this rather than having tag and tags
 			case "tag":
+
+				var tagID string
+				db.QueryRow("SELECT id FROM tags WHERE tag LIKE ?", "%"+searchTerm+"%").Scan(&tagID)
+				rows, err := db.Query("SELECT snipId FROM tagMap WHERE tagId = ?", tagID)
+				if err != nil {
+					return err
+				}
+				for rows.Next() {
+					if err := rows.Scan(&snippetID); err != nil {
+						log.Fatalf("Row scan failed: %v", err)
+					}
+					idSlice = append(idSlice, snippetID)
+				}
+
+			case "tags":
 
 				var tagID string
 				db.QueryRow("SELECT id FROM tags WHERE tag LIKE ?", "%"+searchTerm+"%").Scan(&tagID)
@@ -115,6 +134,26 @@ func browse(searchTerm string, db *sql.DB, SearchField []string) error {
 		}
 	}
 
+	//Remove any snippets that are not the most recent version
+	if !SearchAll {
+		var latestVersionSlice []string
+		for _, id := range idSlice {
+			var name string
+			var version string
+			err := db.QueryRow("SELECT name,version FROM snippets WHERE id = ?", id).Scan(&name, &version)
+			if err != nil {
+				return err
+			}
+			latestVersionStruct, _ := getLatestVersion(name, db)
+			latestVersion := fmt.Sprintf("%d.%d.%d", latestVersionStruct.Major, latestVersionStruct.Minor, latestVersionStruct.Patch)
+			if version == latestVersion {
+				latestVersionSlice = append(latestVersionSlice, id)
+			}
+
+		}
+		idSlice = latestVersionSlice
+	}
+
 	//loop through slice to get results
 	matchSnippets := make(map[string]structs.Result)
 	for _, snippetID = range idSlice {
@@ -133,7 +172,12 @@ func browse(searchTerm string, db *sql.DB, SearchField []string) error {
 	var resultsTable bytes.Buffer
 	tw := table.NewWriter()
 	tw.SetOutputMirror(&resultsTable)
-	tw.AppendHeader(table.Row{"ID", "Name", "Version", "Description", "Tags"})
+
+	if !SearchAll {
+		tw.AppendHeader(table.Row{"ID", "Name", "Version", "Tags"})
+	} else {
+		tw.AppendHeader(table.Row{"ID", "Name", "Version", "Description", "Tags"})
+	}
 	// Merge everything into headerSection
 
 	for id, match := range matchSnippets {
@@ -151,7 +195,12 @@ func browse(searchTerm string, db *sql.DB, SearchField []string) error {
 		tagString := strings.Join(Tags, ", ")
 
 		//Create the table here too
-		tw.AppendRow(table.Row{id, match.Name, match.Version, match.Description, tagString})
+
+		if !SearchAll {
+			tw.AppendRow(table.Row{id, match.Name, match.Description, tagString})
+		} else {
+			tw.AppendRow(table.Row{id, match.Name, match.Version, match.Description, tagString})
+		}
 	}
 	tw.SetStyle(table.StyleRounded) // Optional: You can use StyleLight, StyleBold, etc.
 	tw.Render()
@@ -170,8 +219,8 @@ EXAMPLES
 
 ask browse
 	#Quickly examine everything
-ask browse example
-	#Look for snippets that have "example" in the name
+ask browse example --all
+	#Look for snippets that have "example" in the name and show all versions instead of just the most recent version
 ask ls -f tag web
 	#Look for snippets that have a web tag
 ask ls -f tag -f raw ssh
@@ -204,5 +253,5 @@ ask ls -f tag -f raw ssh
 
 func init() {
 	browseCmd.PersistentFlags().StringSliceVarP(&SearchField, "field", "f", []string{}, "Which field(s) among name, tag, description, and raw for a case-sensitive search.  Use multiple flags to search multiple fields. (Default selection is name.)")
-
+	browseCmd.PersistentFlags().BoolVarP(&SearchAll, "all", "a", false, "Show the version number and all results instead of just the most recent snippet version.")
 }

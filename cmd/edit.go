@@ -125,6 +125,8 @@ func edit(snippetID string, db *sql.DB) {
 	//  keep going until done or we give up
 	updateDatabase(yamlData, db)
 
+	os.Remove(snippetFile)
+	os.Remove(yamlFile)
 	fmt.Fprintf(os.Stdout, "[+] Edited snippet: %s_v%s", yamlData.Name, yamlData.Version)
 	return
 }

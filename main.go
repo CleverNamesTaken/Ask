@@ -1,13 +1,14 @@
 //EASY
-// create zip by tags
+// obsidian templates
 // add next snippet field
+// sort output
 // defer close for everything that does db.Query
 //Check for graceful error handling everywhere
 // where do we _ and do we need to
 // name of archive.zip
-// obsidian templates
 // VarSave output directory
-// new field for next snippets
+// default output directory for vscode and ultisnips rendering
+// quickstart wiki
 
 // MEDIUM
 

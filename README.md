@@ -313,6 +313,7 @@ This tool was inspired by other great projects:
 - v0.3.1 : console flags, tab completion
 - v0.3.2 : Added choices for default values in ultisnips and vscode rendering.  Also tab completion for default value and choices in console.
 - v0.4.0 : Improved vscode rendering.  Added tagging system.  Removed clipboard rendering (for now)
+- v0.4.1 : Improved vscode rendering.  Added --all tag for browsing. Cleaned up tmp directory after creating temp files.  Allow tag or tags for search field
 
 
 
