@@ -169,7 +169,7 @@ var (
 	renderCmd = &cobra.Command{
 		Use:   "render",
 		Short: "Render snippets",
-		Long: `Extract snippets from the database.  You can either extract a single snippet from the database using the snippet ID or name for immediate use, or you can render the entire database to a target directory in text, ultisnip or vscode snippet formats.
+		Long: `Extract snippets from the database.  You can either extract a single snippet from the database using the snippet ID or name for immediate use, or you can render the entire database to a target directory in obsidian (templater), text, ultisnip or vscode snippet formats.
 
 EXAMPLES
 ask render example
@@ -301,6 +301,43 @@ func writeSnippet(snippetText string, snippetFileName string) (err error) {
 
 	debug.Print("[+] Wrote snippet: %s", snippetFileName)
 	return nil
+}
+
+func processObsidian(snippetID string, db *sql.DB) (processed bool, err error) {
+	debug.Print("[*] Attempting Obsidian render for snippet id: %s", snippetID)
+	// Grab all the information for the snippet
+	snippetData, err := getSnippetData(snippetID, db)
+	if err != nil {
+		return false, err
+	}
+	debug.Print("[+] Found information for snippet: %s", snippetData.Name)
+
+	if !isLatestSnippet(db, snippetID, snippetData.Name) && RenderAll != true {
+		debug.Print("[*] Not the latest version, and RenderAll flag not set.  Skipping: %s", snippetData.Name)
+		return false, nil
+	}
+
+	var fullText string
+	snippetText := snippetData.SnippetText
+	var variablePortion string
+
+	for variable, variableInfo := range snippetData.Variables {
+		variablePortion = variablePortion + "<%* let " + variable + " = await tp.system.prompt(\"" + variable + " : " + variableInfo.Description + " Example value: " + variableInfo.ExampleValue + "\",\"" + variableInfo.DefaultValue + "\",false,false); %>\n"
+		snippetText = strings.ReplaceAll(snippetText, "{{ "+variable+" }}", "<% "+variable+" %>")
+
+	}
+
+	metaSection := snippetData.Description + "\n"
+
+	fullText = variablePortion + metaSection + snippetText
+
+	snippetFileName := fmt.Sprintf("%s_v%s.md", snippetData.Name, snippetData.Version)
+	err = writeSnippet(fullText, snippetFileName)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func processVSCode(snippetID string, db *sql.DB) (processed bool, err error) {
@@ -492,6 +529,39 @@ func processUlti(snippetID string, db *sql.DB) (processed bool, err error) {
 	return true, nil
 }
 
+func obsidianRender(db *sql.DB) (processedSnippets int, err error) {
+	debug.Print("[*] Starting Obsidian render function")
+	// Loop through the entire database and render each one as a snippet file
+	var id string
+	var allSnippetIDs []string
+
+	rows, err := db.Query("SELECT id FROM snippets")
+	if err != nil {
+		log.Fatalf("[!] Query failed: %v", err)
+	}
+
+	for rows.Next() {
+		if err := rows.Scan(&id); err != nil {
+			log.Fatalf("Row scan failed: %v", err)
+		}
+		debug.Print("[+] Found snippet: %s", id)
+		allSnippetIDs = append(allSnippetIDs, id)
+	}
+
+	for _, snippetID := range allSnippetIDs {
+		debug.Print("[*] Processing snippet with id: %s", snippetID)
+		processed, err := processObsidian(snippetID, ask_db.DB)
+		if err != nil {
+			return processedSnippets, err
+		}
+		if processed == true {
+			processedSnippets++
+		}
+	}
+
+	return processedSnippets, nil
+}
+
 func vscodeRender(db *sql.DB) (processedSnippets int, err error) {
 	debug.Print("[*] Starting vscode render function")
 	// Loop through the entire database and render each one as a snippet file
@@ -592,6 +662,23 @@ func textRender(db *sql.DB) (processedSnippets int, err error) {
 }
 
 var (
+	obsidianConvertCmd = &cobra.Command{
+		Use:   "obsidian",
+		Short: "Render to Obsidian templater format",
+		Long:  `Extract highest version snippet from the database and render it as an Obsidian templatet.  Note that multiple default values for variables is not supported for Obsidian snippets. These snippets must be accesible to your vault.`,
+		//Args:  cobra.ExactArgs(1),
+		Run: func(_ *cobra.Command, _ []string) {
+			processedSnippets, err := obsidianRender(ask_db.DB)
+			if err != nil {
+				fmt.Fprintf(os.Stdout, "[!] Failed to render Obsidian snippets: %w", err)
+				return
+			}
+			fmt.Fprintf(os.Stdout, "[+] Obsidian snippets rendered to %s: %s", OutputDir, strconv.Itoa(processedSnippets))
+		},
+	}
+)
+
+var (
 	textConvertCmd = &cobra.Command{
 		Use:   "text",
 		Short: "Render to simple text files for manual modification",
@@ -643,15 +730,17 @@ var (
 
 func init() {
 	//renderCmd.Flags().BoolVarP(&Clipboard, "clipboard", "x", false, "Render to clipboard.")
-	renderCmd.AddCommand(textConvertCmd)
 	renderCmd.PersistentFlags().StringVarP(&OutputDir, "outputdir", "o", "./snippets", "Where to output the files, reading from the flag first, then the config file.")
 	renderCmd.PersistentFlags().StringVarP(&LoadFile, "load", "l", "", "YAML file to load variables for rendering")
 	renderCmd.PersistentFlags().BoolVarP(&VarSave, "save", "s", false, "Save the variable selections in a yaml file for future use. Named with timestamp and the snippet name.")
 	renderCmd.AddCommand(ultisnipsConvertCmd)
+	renderCmd.AddCommand(textConvertCmd)
 	renderCmd.AddCommand(vscodeConvertCmd)
+	renderCmd.AddCommand(obsidianConvertCmd)
 
 	vscodeConvertCmd.Flags().BoolVarP(&RenderAll, "all", "a", false, "Render all versions, not just the latest")
 	textConvertCmd.Flags().BoolVarP(&RenderAll, "all", "a", false, "Render all versions, not just the latest")
 	ultisnipsConvertCmd.Flags().BoolVarP(&RenderAll, "all", "a", false, "Render all versions, not just the latest")
+	obsidianConvertCmd.Flags().BoolVarP(&RenderAll, "all", "a", false, "Render all versions, not just the latest")
 
 }

@@ -1,5 +1,4 @@
 //EASY
-// obsidian templates
 // add next snippet field
 // sort output
 // defer close for everything that does db.Query

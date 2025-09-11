@@ -103,6 +103,7 @@ func quickSnippet(db *sql.DB) error {
 	// Close up the database and the temp file
 	yamlHandle.Close()
 	os.Remove(yamlHandle.Name())
+	os.Remove(snippetFile)
 	fmt.Fprintf(os.Stdout, "[+] Added new snippet: %s_v%s", yamlData.Name, yamlData.Version)
 	return nil
 }
@@ -540,8 +541,8 @@ func snippetWizard(snippetStruct structs.Snippet, _ *sql.DB) (SnippetStruct stru
 				// add that the snippet cannot just be numbers
 			} else if !regexp.MustCompile(`^[a-zA-Z0-9_.]*$`).MatchString(str) {
 				return errors.New("Snippet name can only contain alphanumeric characters, period or underscore")
-			} else if str == "vscode" || str == "ultisnips" || str == "text" {
-				return errors.New("Snippet cannot be named vscode, ultisnips, or text")
+			} else if str == "vscode" || str == "ultisnips" || str == "text" || str == "obsidian" {
+				return errors.New("Snippet cannot be named vscode, ultisnips, text, or obsidian")
 			} else if regexp.MustCompile(`^[0-9]*$`).MatchString(str) {
 				return errors.New("Snippet cannot be only numbers")
 			}
@@ -555,6 +556,7 @@ func snippetWizard(snippetStruct structs.Snippet, _ *sql.DB) (SnippetStruct stru
 		Placeholder("This snippet will allow the operator to establish port redirection to throw EternalBlue through a compromised toaster oven, then clean up logs.").
 		Value(&snippetStruct.Description).
 		Validate(func(str string) error {
+			//double quotes breaks ultisnips
 			if len(str) > 255 {
 				return fmt.Errorf("Description cannot exceed 255 characters. %s > 255", strconv.Itoa(len(str)))
 			}

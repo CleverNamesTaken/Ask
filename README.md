@@ -244,7 +244,7 @@ chmod +x ask
     - [x]	in the console, allow use with tab completion of available snippets to discover more
 - [ ] Unit testing
 - [ ] Render output to system clipboard
-- [ ] Render to Templater-Obsidian format
+- [x] Render to Templater-Obsidian format
 
 See the [open issues](https://github.com/CleverNamesTaken/Ask/issues) for a full list of proposed features (and known issues).
 
@@ -314,6 +314,7 @@ This tool was inspired by other great projects:
 - v0.3.2 : Added choices for default values in ultisnips and vscode rendering.  Also tab completion for default value and choices in console.
 - v0.4.0 : Improved vscode rendering.  Added tagging system.  Removed clipboard rendering (for now)
 - v0.4.1 : Improved vscode rendering.  Added --all tag for browsing. Cleaned up tmp directory after creating temp files.  Allow tag or tags for search field
+- v0.5.0 : Added Obsidian template stuff.  Fixed more temp files left over.
 
 
 
