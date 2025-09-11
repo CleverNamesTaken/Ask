@@ -55,20 +55,7 @@
 <details>
   <summary>Table of Contents</summary>
   <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#usage">Usage</a></li>
+    <li><a href="#about-the-project">About The Project</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
@@ -113,101 +100,7 @@ Ask makes use of a TUI to help you write structured snippets that contain metada
 <!-- GETTING STARTED -->
 ## Getting Started
 
-Download or compile the ask binary.
-
-### Prerequisites
-
-None.  If you choose to serve your database with mysql, then you will need to write your configuration file with the IP, port, and credentials.
-
-`ask create conf`
-
-### Installation
-
-None.
-
-If you want to use mysql:
-
-```
-sudo apt update
-sudo apt install mariadb-server -y
-systemctl start mysql
-mysqladmin -u root password 'newpassword'
-```
-
-## Usage
-
-```
-  Ask (Aggregated Snippet Knowledgebase) by the OtherDave (https://github.com/clevernamestaken) is a CLI tool written in
-  golang to save, edit, and share code snippets for terminal-based collaborative operations using databases and         
-  structured TUI forms.                                                                                                 
-                                                                                                                        
-  EXAMPLES                                                                                                              
-  ask create config                                                                                                     
-      #Create the config file to start interacting with a database or create a new one                                  
-                                                                                                                        
-  ask create template                                                                                                   
-      #Create an example snippet file                                                                                   
-                                                                                                                        
-  ask add example.txt                                                                                                   
-      #Ingest the snippet file into the database                                                                        
-                                                                                                                        
-  ask cat example                                                                                                       
-      #Look at the raw snippet text for the snippet named "example"                                                     
-                                                                                                                        
-  ask edit example                                                                                                      
-      #Edit a snippet called "example"                                                                                  
-                                                                                                                        
-  ask ls                                                                                                                
-      #Examine which snippets are in the database                                                                       
-                                                                                                                        
-  ask ls mple                                                                                                           
-      #Examine which snippets in the database have a name containing the string "mple"                                  
-                                                                                                                        
-  ask render example                                                                                                    
-      #Render the snippet named "example" to stdout after being prompted to fill out the variables                      
-                                                                                                                        
-  ask render text --all --outdir ./text_snippets                                                                        
-      #Dump the entire database in text format to a directory called ./text_snippets                                    
-                                                                                                                        
-  ask render create zip --outfile archive.zip                                                                           
-      #Create an archive of the database                                                                                
-                                                                                                                        
-  ask rm --prune                                                                                                        
-      #Remove all of the outdated snippets from the database                                                            
-                                                                                                                        
-  ask  add archive.zip                                                                                                  
-      #Add an archived zip to an existing database.                                                                     
-                                                                                                                        
-  ask console                                                                                                           
-      #Start a metasploit-like console to search for and use snippets                                                   
-                                                                                                                        
-         
-  USAGE  
-         
-    ask [command] [subcommand] [--flags]  
-            
-  COMMANDS  
-            
-    add                         Add new snippets to the database
-    browse                      Browse snippets in the database. Aliased to 'ls'
-    completion [command]        Generate the autocompletion script for the specified shell
-    console                     Start the ask console
-    create [command]            Create config file, snippet template files, zip archive or the database schema
-    edit                        Edit an existing snippet
-    help [command]              Help about any command
-    remove [--flags]            Remove snippets from the database. Aliased to 'rm'
-    render [command] [--flags]  Render snippets
-    show                        Take a quick peek at a raw snippet, excluding the metadata. Aliased to 'cat'
-         
-  FLAGS  
-         
-    -c --config                 Config file (default is $HOME/.config/ask/config.yaml)
-    -d --debug                  Enable debug output
-    -h --help                   Help for ask
-    -v --version                Version for ask
-```
-
-<!-- Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources. -->
+See the [wiki](https://github.com/CleverNamesTaken/Ask/wiki) to get started.
 
 ### Overthewire example
 
@@ -314,19 +207,5 @@ This tool was inspired by other great projects:
 - v0.3.2 : Added choices for default values in ultisnips and vscode rendering.  Also tab completion for default value and choices in console.
 - v0.4.0 : Improved vscode rendering.  Added tagging system.  Removed clipboard rendering (for now)
 - v0.4.1 : Improved vscode rendering.  Added --all tag for browsing. Cleaned up tmp directory after creating temp files.  Allow tag or tags for search field
-- v0.5.0 : Added Obsidian template stuff.  Fixed more temp files left over.
+- v0.5.0 : Added Obsidian template rendering.  Some minor bug fixes.
 
-
-
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/CleverNamesTaken/Ask.svg?style=for-the-badge
-[contributors-url]: https://github.com/CleverNamesTaken/Ask/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/CleverNamesTaken/Ask.svg?style=for-the-badge
-[forks-url]: https://github.com/CleverNamesTaken/Ask/network/members
-[stars-shield]: https://img.shields.io/github/stars/CleverNamesTaken/Ask.svg?style=for-the-badge
-[stars-url]: https://github.com/CleverNamesTaken/Ask/stargazers
-[issues-shield]: https://img.shields.io/github/issues/CleverNamesTaken/Ask.svg?style=for-the-badge
-[issues-url]: https://github.com/CleverNamesTaken/Ask/issues
-[license-shield]: https://img.shields.io/github/license/CleverNamesTaken/Ask.svg?style=for-the-badge
-[license-url]: https://github.com/CleverNamesTaken/Ask/blob/master/LICENSE.txt
