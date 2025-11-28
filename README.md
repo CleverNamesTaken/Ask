@@ -22,7 +22,7 @@
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
-[![project_license][license-shield]][license-url]
+![project_license][license-shield]
 
 
 
@@ -208,4 +208,18 @@ This tool was inspired by other great projects:
 - v0.4.0 : Improved vscode rendering.  Added tagging system.  Removed clipboard rendering (for now)
 - v0.4.1 : Improved vscode rendering.  Added --all tag for browsing. Cleaned up tmp directory after creating temp files.  Allow tag or tags for search field
 - v0.5.0 : Added Obsidian template rendering.  Some minor bug fixes.
+
+p>
+
+
+[contributors-shield]: https://img.shields.io/github/contributors/CleverNamesTaken/Ask.svg?style=for-the-badge
+[contributors-url]: https://github.com/CleverNamesTaken/Ask/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/CleverNamesTaken/Ask.svg?style=for-the-badge
+[forks-url]: https://github.com/CleverNamesTaken/Ask/network/members
+[stars-shield]: https://img.shields.io/github/stars/CleverNamesTaken/Ask.svg?style=for-the-badge
+[stars-url]: https://github.com/CleverNamesTaken/Ask/stargazers
+[issues-shield]: https://img.shields.io/github/issues/CleverNamesTaken/Ask.svg?style=for-the-badge
+[issues-url]: https://github.com/CleverNamesTaken/Ask/issues
+[license-shield]: https://img.shields.io/github/license/CleverNamesTaken/Ask.svg?style=for-the-badge
+
 
