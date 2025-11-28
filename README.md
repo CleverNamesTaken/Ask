@@ -138,6 +138,8 @@ chmod +x ask
 - [ ] Unit testing
 - [ ] Render output to system clipboard
 - [x] Render to Templater-Obsidian format
+- [ ] Nest snippets
+- [ ] Add quickstart scripts for neovim, Obsidian, and VS Code
 
 See the [open issues](https://github.com/CleverNamesTaken/Ask/issues) for a full list of proposed features (and known issues).
 
@@ -209,7 +211,7 @@ This tool was inspired by other great projects:
 - v0.4.1 : Improved vscode rendering.  Added --all tag for browsing. Cleaned up tmp directory after creating temp files.  Allow tag or tags for search field
 - v0.5.0 : Added Obsidian template rendering.  Some minor bug fixes.
 
-p>
+</p>
 
 
 [contributors-shield]: https://img.shields.io/github/contributors/CleverNamesTaken/Ask.svg?style=for-the-badge
