@@ -105,15 +105,16 @@ See the [wiki](https://github.com/CleverNamesTaken/Ask/wiki) to get started.
 ### Overthewire example
 
 ```
+apt install build-essentials
 git clone git@github.com:CleverNamesTaken/Ask.git
-go build -o ask
-chmod +x ask
-./ask add archive.zip
+CGO_ENABLED=1 sudo go build -o /usr/local/bin/ask
+chmod +x /usr/local/bin/ask
+ask add archive.zip
 2
     #Create the sqlite database just to start going
-./ask render bandit0
-./ask render bandit1
-./ask render bandit2 -l examples/bandit2.yaml
+ask render bandit0
+ask render bandit1
+ask render bandit2 -l examples/bandit2.yaml
 ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -138,8 +139,14 @@ chmod +x ask
 - [ ] Unit testing
 - [ ] Render output to system clipboard
 - [x] Render to Templater-Obsidian format
+- [ ] Render to [tome](https://github.com/laktak/tome) format
 - [ ] Nest snippets
-- [ ] Add quickstart scripts for neovim, Obsidian, and VS Code
+- [ ] Add quickstart scripts for
+    - [x] neovim
+    - [x] tome
+    - [ ] Obsidian
+    - [ ] VS Code
+- [ ] Check before overwriting archive.zip
 
 See the [open issues](https://github.com/CleverNamesTaken/Ask/issues) for a full list of proposed features (and known issues).
 
@@ -210,6 +217,7 @@ This tool was inspired by other great projects:
 - v0.4.0 : Improved vscode rendering.  Added tagging system.  Removed clipboard rendering (for now)
 - v0.4.1 : Improved vscode rendering.  Added --all tag for browsing. Cleaned up tmp directory after creating temp files.  Allow tag or tags for search field
 - v0.5.0 : Added Obsidian template rendering.  Some minor bug fixes.
+- v0.5.1 : Disable newlines in snippet descriptions because it breaks some snippet engines.
 
 </p>
 

@@ -556,9 +556,9 @@ func snippetWizard(snippetStruct structs.Snippet, _ *sql.DB) (SnippetStruct stru
 		Placeholder("This snippet will allow the operator to establish port redirection to throw EternalBlue through a compromised toaster oven, then clean up logs.").
 		Value(&snippetStruct.Description).
 		Validate(func(str string) error {
-			//double quotes breaks ultisnips
-			if len(str) > 255 {
-				return fmt.Errorf("Description cannot exceed 255 characters. %s > 255", strconv.Itoa(len(str)))
+			//double quotes and/or newline breaks ultisnips
+			if len(str) > 255 || strings.Contains(str, "\n"){
+				return fmt.Errorf("Description cannot exceed 255 characters or contain newlines. %s > 255", strconv.Itoa(len(str)))
 			}
 			return nil
 		},
