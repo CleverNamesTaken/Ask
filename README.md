@@ -105,8 +105,8 @@ See the [wiki](https://github.com/CleverNamesTaken/Ask/wiki) to get started.
 ### Overthewire example
 
 ```
-apt install build-essentials
-git clone git@github.com:CleverNamesTaken/Ask.git
+apt install build-essential
+git clone https://github.com/CleverNamesTaken/Ask.git
 CGO_ENABLED=1 sudo go build -o /usr/local/bin/ask
 chmod +x /usr/local/bin/ask
 ask add archive.zip
